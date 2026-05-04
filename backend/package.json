@@ -1,0 +1,51 @@
+{
+  "name": "ecommerce-backend",
+  "version": "1.0.0",
+  "description": "M Sports - Backend API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "seed": "node src/seeds/seed.js",
+    "seed:destroy": "node src/seeds/seed.js --destroy",
+    "test": "jest --runInBand --forceExit",
+    "test:watch": "jest --watch"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.5.1",
+    "compression": "^1.7.4",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "csurf": "^1.11.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^7.4.1",
+    "express-validator": "^7.2.0",
+    "helmet": "^7.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "mercadopago": "^2.0.15",
+    "mongoose": "^8.9.4",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "multer-storage-cloudinary": "^4.0.0",
+    "nodemailer": "^6.9.16",
+    "uuid": "^11.1.0",
+    "xss-clean": "^0.1.4"
+  },
+  "devDependencies": {
+    "jest": "^30.3.0",
+    "nodemon": "^3.1.9",
+    "supertest": "^7.2.2"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/__tests__/**/*.test.js"],
+    "collectCoverageFrom": ["src/**/*.js"],
+    "coverageDirectory": "coverage",
+    "moduleNameMapper": {
+      ".*ai-ecommerce-engine.*": "<rootDir>/__mocks__/ai-ecommerce-engine.js"
+    }
+  }
+}

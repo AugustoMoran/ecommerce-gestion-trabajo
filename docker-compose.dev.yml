@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - MONGO_URI=mongodb+srv://msportsbsports_db_user:nzrmfOlFqUWb3cVI@cluster0.zdr9e3q.mongodb.net/?appName=Cluster0
+      - JWT_SECRET=jwt-secret-ecommerce-2024-xK9mP3nQ
+      - REFRESH_TOKEN_SECRET=refresh-secret-ecommerce-2024-zL7wR5vY
+      - FRONTEND_URL=http://localhost:5173
+      - NODE_ENV=development
+      - CLOUDINARY_CLOUD_NAME=dvovry3d2
+      - CLOUDINARY_API_KEY=571172181573731
+      - CLOUDINARY_API_SECRET=mm68sBHjcBCcXgz2qlBvnOh32sU
+      - CLOUDINARY_STORAGE_LIMIT_MB=25000
+      - MP_ACCESS_TOKEN=APP_USR-2696291361990124-042916-7ce8a1f71637ef5770910578c12ed1b5-212446458
+      - MP_PUBLIC_KEY=APP_USR-668553da-903c-42e1-bfea-6e7637f4ed60
+      - MP_WEBHOOK_SECRET=27336490861113fa1ddb4774b5d10a66601bfadf300e9c7a41c507f448364827
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_USER=m.sports.b.sports@gmail.com
+      - SMTP_PASS=
+      - WHATSAPP_NUMBER=541130837054
+      - ADMIN_EMAIL=m.sports.b.sports@gmail.com
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:5000/api
+      - VITE_WHATSAPP_NUMBER=541130837054
+      - VITE_ADMIN_EMAIL=m.sports.b.sports@gmail.com
+      - VITE_INSTAGRAM_URL=https://www.instagram.com/m.sports_sin_limites?igsh=amYxdTU5aG42MHhj
+      - VITE_TIKTOK_URL=https://www.tiktok.com/@sin_limite_136
+      - VITE_STORE_NAME=M Sports - Sin Limites
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - app-network
+    restart: unless-stopped
+
+networks:
+  app-network:
+    driver: bridge

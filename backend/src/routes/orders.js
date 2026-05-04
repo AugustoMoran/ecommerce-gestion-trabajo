@@ -1,0 +1,28 @@
+const express = require('express');
+const router = express.Router();
+const { protect, adminOnly, optionalAuth } = require('../middleware/auth');
+const {
+  createOrder, getMyOrders, getOrderByCode, getAllOrders, updateOrder, dispatchOrder, finalizeOrder, deleteOrder, updateProductStock, checkMercadoPagoStatus,
+} = require('../controllers/orderController');
+
+// Public: create order (guest or logged-in)
+router.post('/', optionalAuth, createOrder);
+
+// Public: track by code
+router.get('/track/:codigo', getOrderByCode);
+
+// Public: Check MP payment status on return from checkout
+router.get('/mp-callback/status', checkMercadoPagoStatus);
+
+// Authenticated user
+router.get('/my', protect, getMyOrders);
+
+// Admin
+router.get('/', protect, adminOnly, getAllOrders);
+router.put('/:id', protect, adminOnly, updateOrder);
+router.post('/dispatch', protect, adminOnly, dispatchOrder);
+router.post('/:id/finalize', protect, adminOnly, finalizeOrder);
+router.post('/product/update-stock', protect, adminOnly, updateProductStock);
+router.delete('/:id', protect, adminOnly, deleteOrder);
+
+module.exports = router;

@@ -1,0 +1,436 @@
+import React, { useState } from 'react';
+import AdminLayout from '../../components/admin/AdminLayout';
+import {
+  useGetBannersQuery,
+  useCreateBannerMutation,
+  useUpdateBannerMutation,
+  useDeleteBannerMutation,
+} from '../../services/bannersApi';
+import { useUploadImageMutation } from '../../services/cartApi';
+import toast from 'react-hot-toast';
+import { HiOutlinePlus, HiOutlineTrash, HiOutlinePencil, HiX, HiOutlinePhotograph, HiOutlineFilm } from 'react-icons/hi';
+
+const GRADIENTS = [
+  { label: 'Azul', value: 'from-blue-900/70 to-transparent' },
+  { label: 'Violeta', value: 'from-purple-900/70 to-transparent' },
+  { label: 'Verde', value: 'from-emerald-900/70 to-transparent' },
+  { label: 'Rojo', value: 'from-red-900/70 to-transparent' },
+  { label: 'Naranja', value: 'from-orange-900/70 to-transparent' },
+  { label: 'Amarillo', value: 'from-yellow-600/60 to-transparent' },
+  { label: 'Amarillo claro', value: 'from-yellow-400/50 to-transparent' },
+  { label: 'Negro', value: 'from-gray-900/80 to-transparent' },
+  { label: 'Blanco', value: 'from-white/50 to-transparent' },
+  { label: 'Gris claro', value: 'from-gray-200/50 to-transparent' },
+  { label: 'Transparente', value: 'transparent' },
+];
+
+const EMPTY = {
+  titulo: '',
+  subtitulo: '',
+  imagen: '',
+  imagenPublicId: '',
+  video: '',
+  videoPublicId: '',
+  mostrarTexto: true,
+  ctaTexto: 'Ver productos',
+  ctaLink: '/productos',
+  mostrarBoton: true,
+  autoplay: false,
+  gradient: 'from-blue-900/70 to-transparent',
+  activo: true,
+  orden: 0,
+};
+
+const BannersAdmin = () => {
+  // Force rebuild v3
+  const { data: banners = [], isLoading } = useGetBannersQuery(false);
+  const [createBanner] = useCreateBannerMutation();
+  const [updateBanner] = useUpdateBannerMutation();
+  const [deleteBanner] = useDeleteBannerMutation();
+  const [uploadImage] = useUploadImageMutation();
+
+  const [form, setForm] = useState(EMPTY);
+  const [editing, setEditing] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [newVideoFile, setNewVideoFile] = useState(null);
+  const [newVideoPreview, setNewVideoPreview] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.imagen && !form.video) return toast.error('Banner debe tener al menos una imagen o un video');
+    try {
+      if (editing) {
+        await updateBanner({ id: editing, ...form }).unwrap();
+        toast.success('Banner actualizado');
+      } else {
+        await createBanner(form).unwrap();
+        toast.success('Banner creado');
+      }
+      setForm(EMPTY);
+      setEditing(null);
+      setShowForm(false);
+    } catch (err) {
+      toast.error(err?.data?.message || 'Error');
+    }
+  };
+
+  const handleEdit = (b) => {
+    setForm({
+      titulo: b.titulo || '',
+      subtitulo: b.subtitulo || '',
+      imagen: b.imagen,
+      imagenPublicId: b.imagenPublicId || '',
+      video: b.video || '',
+      videoPublicId: b.videoPublicId || '',
+      mostrarTexto: b.mostrarTexto !== false,
+      ctaTexto: b.ctaTexto,
+      ctaLink: b.ctaLink,
+      mostrarBoton: b.mostrarBoton !== false,
+      autoplay: b.autoplay || false,
+      gradient: b.gradient,
+      activo: b.activo,
+      orden: b.orden,
+    });
+    setNewVideoPreview('');
+    setEditing(b._id);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('¿Eliminar banner?')) return;
+    try {
+      await deleteBanner(id).unwrap();
+      toast.success('Eliminado');
+    } catch {
+      toast.error('Error al eliminar');
+    }
+  };
+
+  const handleToggle = async (b) => {
+    try {
+      await updateBanner({ id: b._id, activo: !b.activo }).unwrap();
+      toast.success(b.activo ? 'Banner desactivado' : 'Banner activado');
+    } catch {
+      toast.error('Error');
+    }
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('image', file);
+      const { url, publicId } = await uploadImage(fd).unwrap();
+      setForm((f) => ({ ...f, imagen: url, imagenPublicId: publicId }));
+      toast.success('Imagen subida');
+    } catch {
+      toast.error('Error al subir imagen');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleVideoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('image', file);
+      const { url, publicId } = await uploadImage(fd).unwrap();
+      setForm((f) => ({ ...f, video: url, videoPublicId: publicId }));
+      setNewVideoPreview(URL.createObjectURL(file));
+      toast.success('Video subido');
+    } catch {
+      toast.error('Error al subir video');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveVideo = () => {
+    setForm((f) => ({ ...f, video: '', videoPublicId: '' }));
+    setNewVideoPreview('');
+    setNewVideoFile(null);
+  };
+
+  return (
+    <AdminLayout>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Banners / Carrusel</h1>
+        <button
+          onClick={() => { setShowForm(true); setEditing(null); setForm(EMPTY); setNewVideoPreview(''); setNewVideoFile(null); }}
+          className="btn-primary flex items-center gap-2"
+        >
+          <HiOutlinePlus size={16} /> Nuevo banner
+        </button>
+      </div>
+
+      {/* Form */}
+      {showForm && (
+        <div className="card p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold">{editing ? 'Editar banner' : 'Nuevo banner'}</h2>
+            <button onClick={() => setShowForm(false)}><HiX size={18} /></button>
+          </div>
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Toggle: Mostrar campos de texto */}
+            <div className="md:col-span-2 flex items-center gap-2 bg-gray-50 p-3 rounded">
+              <input
+                type="checkbox"
+                id="mostrarTexto"
+                checked={form.mostrarTexto}
+                onChange={(e) => setForm({ ...form, mostrarTexto: e.target.checked })}
+                className="w-4 h-4"
+              />
+              <label htmlFor="mostrarTexto" className="text-sm font-medium cursor-pointer">
+                Mostrar título, subtítulo y botón
+              </label>
+            </div>
+
+            {/* Campos de texto (condicionales) */}
+            {form.mostrarTexto && (
+              <>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1">Título</label>
+                  <input
+                    type="text"
+                    value={form.titulo}
+                    onChange={(e) => setForm({ ...form, titulo: e.target.value })}
+                    className="input-field"
+                    placeholder="Ej: Nueva colección"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1">Subtítulo</label>
+                  <input
+                    type="text"
+                    value={form.subtitulo}
+                    onChange={(e) => setForm({ ...form, subtitulo: e.target.value })}
+                    className="input-field"
+                    placeholder="Ej: Descubrí los mejores productos"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Imagen */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-1">Imagen</label>
+              <div className="flex items-center gap-3">
+                <label className="btn-secondary flex items-center gap-2 cursor-pointer">
+                  <HiOutlinePhotograph size={16} />
+                  {uploading ? 'Subiendo...' : 'Subir imagen'}
+                  <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                </label>
+                {form.imagen && (
+                  <img src={form.imagen} alt="preview" className="h-14 w-24 object-cover rounded" />
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">O pegá una URL directamente:</p>
+              <input
+                type="url"
+                value={form.imagen}
+                onChange={(e) => setForm({ ...form, imagen: e.target.value })}
+                placeholder="https://..."
+                className="input-field mt-1"
+              />
+              <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded mt-2">💡 Recomendado: <strong>1600×900px</strong> o <strong>1920×1080px</strong> (16:9). Se adaptará automáticamente a toda la pantalla.</p>
+            </div>
+
+            {/* Video (opcional) */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-1">Video (opcional)</label>
+              <div className="flex items-center gap-3">
+                <label className="btn-secondary flex items-center gap-2 cursor-pointer">
+                  <HiOutlineFilm size={16} />
+                  {uploading ? 'Subiendo...' : 'Subir video'}
+                  <input type="file" accept="video/*" onChange={handleVideoUpload} className="hidden" />
+                </label>
+                {form.video && (
+                  <div className="relative">
+                    <video src={form.video} className="h-14 w-24 object-cover rounded" />
+                    <button
+                      type="button"
+                      onClick={handleRemoveVideo}
+                      className="absolute top-0 right-0 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transform translate-x-1 -translate-y-1"
+                    >
+                      <HiX size={12} />
+                    </button>
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">O pegá una URL directamente:</p>
+              <input
+                type="url"
+                value={form.video}
+                onChange={(e) => setForm({ ...form, video: e.target.value })}
+                placeholder="https://..."
+                className="input-field mt-1"
+              />
+              {form.video && (
+                <div className="flex items-center gap-2 mt-2">
+                  <input
+                    type="checkbox"
+                    id="autoplay"
+                    checked={form.autoplay}
+                    onChange={(e) => setForm({ ...form, autoplay: e.target.checked })}
+                    className="w-4 h-4"
+                  />
+                  <label htmlFor="autoplay" className="text-sm">Autoplay</label>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Texto del botón</label>
+              <input
+                type="text"
+                value={form.ctaTexto}
+                onChange={(e) => setForm({ ...form, ctaTexto: e.target.value })}
+                className="input-field"
+                disabled={!form.mostrarBoton}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Link del botón</label>
+              <input
+                type="text"
+                value={form.ctaLink}
+                onChange={(e) => setForm({ ...form, ctaLink: e.target.value })}
+                className="input-field"
+                placeholder="/productos"
+                disabled={!form.mostrarBoton}
+              />
+            </div>
+
+            <div className="flex items-center gap-2 md:col-span-2">
+              <input
+                type="checkbox"
+                id="mostrarBoton"
+                checked={form.mostrarBoton}
+                onChange={(e) => setForm({ ...form, mostrarBoton: e.target.checked })}
+                className="w-4 h-4"
+              />
+              <label htmlFor="mostrarBoton" className="text-sm font-medium cursor-pointer">
+                Mostrar botón CTA
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Color de fondo</label>
+              <select
+                value={form.gradient}
+                onChange={(e) => setForm({ ...form, gradient: e.target.value })}
+                className="input-field"
+              >
+                {GRADIENTS.map((g) => (
+                  <option key={g.value} value={g.value}>{g.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Orden</label>
+              <input
+                type="number"
+                value={form.orden}
+                onChange={(e) => setForm({ ...form, orden: Number(e.target.value) })}
+                className="input-field"
+                min={0}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="activo"
+                checked={form.activo}
+                onChange={(e) => setForm({ ...form, activo: e.target.checked })}
+                className="w-4 h-4"
+              />
+              <label htmlFor="activo" className="text-sm">Visible en la tienda</label>
+            </div>
+
+            <div className="md:col-span-2 flex gap-3 justify-end">
+              <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">
+                Cancelar
+              </button>
+              <button type="submit" className="btn-primary">
+                {editing ? 'Actualizar' : 'Crear banner'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Lista */}
+      {isLoading ? (
+        <p className="text-gray-500">Cargando...</p>
+      ) : banners.length === 0 ? (
+        <div className="card p-10 text-center text-gray-400">
+          <HiOutlinePhotograph size={40} className="mx-auto mb-3 opacity-40" />
+          <p>No hay banners. Creá el primero.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {banners.map((b) => (
+            <div key={b._id} className="card p-4 flex items-center gap-4">
+              {b.imagen ? (
+                <img
+                  src={b.imagen}
+                  alt={b.titulo}
+                  className="w-28 h-16 object-cover rounded flex-shrink-0"
+                />
+              ) : b.video ? (
+                <video
+                  src={b.video}
+                  className="w-28 h-16 object-cover rounded flex-shrink-0 bg-gray-800"
+                />
+              ) : (
+                <div className="w-28 h-16 bg-gray-300 rounded flex-shrink-0 flex items-center justify-center">
+                  <HiOutlinePhotograph size={24} className="text-gray-500" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold truncate">{b.titulo}</p>
+                <p className="text-sm text-gray-500 truncate">{b.subtitulo}</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Orden: {b.orden} · Link: {b.ctaLink}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={() => handleToggle(b)}
+                  className={`text-xs px-3 py-1 rounded-full font-medium ${
+                    b.activo
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-gray-100 text-gray-500'
+                  }`}
+                >
+                  {b.activo ? 'Activo' : 'Inactivo'}
+                </button>
+                <button
+                  onClick={() => handleEdit(b)}
+                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                >
+                  <HiOutlinePencil size={16} />
+                </button>
+                <button
+                  onClick={() => handleDelete(b._id)}
+                  className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                >
+                  <HiOutlineTrash size={16} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </AdminLayout>
+  );
+};
+
+export default BannersAdmin;
