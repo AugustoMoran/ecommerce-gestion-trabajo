@@ -14,7 +14,7 @@ router.post(
   [
     body('nombre').trim().notEmpty().withMessage('Nombre requerido'),
     body('apellido').trim().notEmpty().withMessage('Apellido requerido'),
-    body('email').isEmail().normalizeEmail().withMessage('Email inválido'),
+    body('email').isEmail().normalizeEmail({ gmail: false, gmail_remove_dots: false }).withMessage('Email inválido'),
     body('password').isLength({ min: 6 }).withMessage('Contraseña mínimo 6 caracteres'),
   ],
   validate,
@@ -25,7 +25,7 @@ router.post(
   '/login',
   authLimiter,
   [
-    body('email').isEmail().normalizeEmail(),
+    body('email').isEmail().normalizeEmail({ gmail: false, gmail_remove_dots: false }),
     body('password').notEmpty(),
   ],
   validate,

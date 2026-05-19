@@ -4,7 +4,7 @@ import { formatCurrency } from '../utils/formatCurrency';
 import { Link } from 'react-router-dom';
 
 const STATUS_LABELS = {
-  pendiente: { label: 'Pendiente', color: 'bg-yellow-100 text-yellow-700' },
+  pendiente: { label: 'Pendiente', color: 'bg-primary-100 text-primary-900' },
   preparando: { label: 'Preparando', color: 'bg-blue-100 text-blue-700' },
   enviado: { label: 'Enviado', color: 'bg-purple-100 text-purple-700' },
   entregado: { label: 'Entregado', color: 'bg-green-100 text-green-700' },
@@ -12,8 +12,8 @@ const STATUS_LABELS = {
 };
 
 const PAY_LABELS = {
-  pendiente: { label: 'Pendiente', color: 'bg-yellow-100 text-yellow-700' },
-  aprobado: { label: 'Aprobado', color: 'bg-green-100 text-green-700' },
+  pendiente: { label: 'Pendiente', color: 'bg-primary-100 text-primary-900' },
+  aprobado: { label: 'Aprobado', color: 'bg-green-900 text-green-300' },
   rechazado: { label: 'Rechazado', color: 'bg-red-100 text-red-600' },
 };
 
@@ -27,8 +27,8 @@ const OrderHistory = () => {
     <div className="max-w-3xl mx-auto px-4 py-12 space-y-4">
       {Array.from({ length: 3 }).map((_, i) => (
         <div key={i} className="card p-5 animate-pulse space-y-3">
-          <div className="h-4 bg-gray-200 rounded w-1/3" />
-          <div className="h-3 bg-gray-200 rounded w-1/4" />
+          <div className="h-4 bg-gray-800 rounded w-1/3" />
+          <div className="h-3 bg-gray-800 rounded w-1/4" />
         </div>
       ))}
     </div>
@@ -68,7 +68,7 @@ const OrderHistory = () => {
                 <div className="flex flex-wrap gap-2 mb-3">
                   <span className={`badge text-xs ${envio.color}`}>{envio.label}</span>
                   <span className={`badge text-xs ${pago.color}`}>Pago: {pago.label}</span>
-                  <span className="badge bg-gray-100 text-gray-600 text-xs capitalize">{order.metodoPago}</span>
+                  <span className="badge bg-gray-800 text-gray-300 text-xs capitalize">{order.metodoPago}</span>
                 </div>
 
                 <div className="flex items-center gap-2 text-xs text-gray-500">

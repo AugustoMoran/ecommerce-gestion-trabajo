@@ -13,6 +13,10 @@ import {
   HiOutlineCollection,
   HiOutlineHome,
   HiOutlineChatAlt2,
+  HiOutlineBriefcase,
+  HiOutlineUsers,
+  HiOutlineStar,
+  HiOutlineDocument,
 } from 'react-icons/hi';
 
 const NAV_ITEMS = [
@@ -20,10 +24,14 @@ const NAV_ITEMS = [
   { to: '/admin/productos', label: 'Productos', icon: HiOutlineCube },
   { to: '/admin/categorias', label: 'Categorías', icon: HiOutlineTag },
   { to: '/admin/ordenes', label: 'Pedidos', icon: HiOutlineClipboardList },
+  { to: '/admin/trabajos', label: 'Bolsa de Trabajos', icon: HiOutlineBriefcase },
+  { to: '/admin/presupuestos', label: 'Presupuestos', icon: HiOutlineDocument },
   { to: '/admin/cupones', label: 'Cupones', icon: HiOutlineTicket },
   { to: '/admin/cloudinary', label: 'Almacenamiento', icon: HiOutlinePhotograph },
   { to: '/admin/banners', label: 'Banners', icon: HiOutlineCollection },
   { to: '/admin/popup', label: 'Popup WhatsApp', icon: HiOutlineChatAlt2 },
+  { to: '/admin/usuarios', label: 'Gestión de Usuarios', icon: HiOutlineUsers },
+  { to: '/admin/recomendaciones', label: 'Recomendaciones', icon: HiOutlineStar },
 ];
 
 const AdminLayout = ({ children }) => {
@@ -65,7 +73,7 @@ const AdminLayout = ({ children }) => {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto bg-[#F5F3EE] p-6">
+      <main className="flex-1 overflow-auto bg-gray-950 p-6">
         {children}
       </main>
     </div>

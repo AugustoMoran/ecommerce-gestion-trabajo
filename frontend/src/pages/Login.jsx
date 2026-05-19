@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLoginMutation } from '../services/authApi';
-import { setCredentials } from '../features/auth/authSlice';
 import { useSyncCartMutation } from '../services/cartApi';
 import { clearGuestCart, selectCartItems } from '../features/cart/cartSlice';
-import { useSelector } from 'react-redux';
+import { selectCurrentUser } from '../features/auth/authSlice';
 import toast from 'react-hot-toast';
 
 const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const user = useSelector(selectCurrentUser);
   const [form, setForm] = useState({ email: '', password: '' });
   const [login, { isLoading }] = useLoginMutation();
   const [syncCart] = useSyncCartMutation();
@@ -26,7 +26,8 @@ const Login = () => {
         cantidad: i.cantidad,
       }));
       const result = await login({ ...form, guestCart }).unwrap();
-      dispatch(setCredentials({ accessToken: result.accessToken, user: result.user }));
+      // authApi automatically dispatches setCredentials with user data
+      // Backend sets HttpOnly cookies - they're sent automatically
 
       // Sync guest cart to DB
       if (guestCart.length > 0) {
@@ -35,6 +36,8 @@ const Login = () => {
       }
 
       toast.success(`¡Bienvenido, ${result.user.nombre}!`);
+      
+      // Todos los roles comienzan en la página de inicio
       navigate('/');
     } catch (err) {
       toast.error(err?.data?.message || 'Error al iniciar sesión');
@@ -42,7 +45,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-12 bg-gray-50">
+    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-12 bg-gray-950">
       <div className="w-full max-w-md">
         <div className="card p-8">
           <div className="text-center mb-8">

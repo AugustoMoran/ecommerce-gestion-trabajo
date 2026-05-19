@@ -50,6 +50,14 @@ const orderSchema = new mongoose.Schema(
     notificacionEnviada: { type: Boolean, default: false },
     codigoUsado: { type: Boolean, default: false },
     stockDeducido: { type: Boolean, default: false },
+    // Geolocalización
+    esEnAMBA: { type: Boolean, default: null }, // null si no se validó, true/false si se validó
+    coordenadas: {
+      lat: { type: Number, default: null },
+      lng: { type: Number, default: null },
+    },
+    partido: { type: String, default: null }, // Partido obtenido de geocodificación
+    provincia: { type: String, default: null }, // Provincia obtenida de geocodificación
   },
   { timestamps: true }
 );

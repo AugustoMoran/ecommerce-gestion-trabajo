@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { useRegisterMutation } from '../services/authApi';
-import { setCredentials } from '../features/auth/authSlice';
 import toast from 'react-hot-toast';
 
 const Register = () => {
@@ -17,7 +16,8 @@ const Register = () => {
     e.preventDefault();
     try {
       const result = await register(form).unwrap();
-      dispatch(setCredentials({ accessToken: result.accessToken, user: result.user }));
+      // authApi automatically dispatches setCredentials with user data
+      // Backend sets HttpOnly cookies - they're sent automatically
       toast.success('¡Cuenta creada correctamente!');
       navigate('/');
     } catch (err) {
@@ -26,7 +26,7 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-12 bg-gray-50">
+    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-12 bg-gray-950">
       <div className="w-full max-w-md">
         <div className="card p-8">
           <div className="text-center mb-8">

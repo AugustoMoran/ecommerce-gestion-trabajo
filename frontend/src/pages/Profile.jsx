@@ -3,7 +3,6 @@ import { useGetMeQuery, useUpdateProfileMutation } from '../services/authApi';
 import { useDispatch } from 'react-redux';
 import { setCredentials } from '../features/auth/authSlice';
 import { useSelector } from 'react-redux';
-import { selectAccessToken } from '../features/auth/authSlice';
 import toast from 'react-hot-toast';
 
 const Profile = () => {
@@ -12,7 +11,6 @@ const Profile = () => {
   }, []);
 
   const { data: user, isLoading } = useGetMeQuery();
-  const token = useSelector(selectAccessToken);
   const dispatch = useDispatch();
   const [updateProfile, { isLoading: isSaving }] = useUpdateProfileMutation();
   const [form, setForm] = useState(null);
@@ -32,9 +30,9 @@ const Profile = () => {
 
   if (isLoading || !form) return (
     <div className="max-w-xl mx-auto px-4 py-12 animate-pulse space-y-4">
-      <div className="h-8 bg-gray-200 rounded w-1/3" />
-      <div className="h-12 bg-gray-200 rounded" />
-      <div className="h-12 bg-gray-200 rounded" />
+      <div className="h-8 bg-gray-800 rounded w-1/3" />
+      <div className="h-12 bg-gray-800 rounded" />
+      <div className="h-12 bg-gray-800 rounded" />
     </div>
   );
 
@@ -48,7 +46,7 @@ const Profile = () => {
         direccion: { calle: form.direccion, ciudad: form.ciudad, provincia: form.provincia },
       };
       const result = await updateProfile(payload).unwrap();
-      dispatch(setCredentials({ accessToken: token, user: result.user }));
+      dispatch(setCredentials({ user: result }));
       toast.success('Perfil actualizado');
     } catch (err) {
       toast.error(err?.data?.message || 'Error al actualizar');
@@ -106,8 +104,26 @@ const Profile = () => {
             </div>
           </div>
 
+          <p className="text-xs text-gray-500 mt-1">
+            Al guardar, se detectará automáticamente tu zona de cobertura para instalación.
+          </p>
+
+          {user.zone ? (
+            <div className="mt-2 p-3 bg-green-900/40 border border-green-700 rounded-lg">
+              <p className="text-sm text-green-400 font-medium">
+                📍 Zona detectada: <strong>{user.zone}</strong> — Servicio de instalación disponible en tu zona.
+              </p>
+            </div>
+          ) : (
+            <div className="mt-2 p-3 bg-gray-800 border border-gray-700 rounded-lg">
+              <p className="text-sm text-gray-400">
+                📍 Sin zona detectada. Guardá tu dirección para activar el servicio de instalación (solo AMBA/CABA).
+              </p>
+            </div>
+          )}
+
           <button type="submit" disabled={isSaving} className="btn-primary w-full mt-2">
-            {isSaving ? 'Guardando...' : 'Guardar cambios'}
+            {isSaving ? 'Detectando zona y guardando...' : 'Guardar cambios'}
           </button>
         </form>
       </div>

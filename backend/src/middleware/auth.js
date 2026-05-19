@@ -54,6 +54,17 @@ const adminOnly = (req, res, next) => {
 };
 
 /**
+ * Middleware factory: authorize specific roles.
+ * Usage: authorizeRoles(['admin', 'tecnico'])
+ */
+const authorizeRoles = (roles) => (req, res, next) => {
+  if (!req.user || !roles.includes(req.user.role)) {
+    return res.status(403).json({ message: `Acceso denegado. Roles permitidos: ${roles.join(', ')}.` });
+  }
+  next();
+};
+
+/**
  * Middleware: optionally attach user if token present in cookie or Authorization header (non-blocking).
  */
 const optionalAuth = async (req, res, next) => {
@@ -86,4 +97,4 @@ const optionalAuth = async (req, res, next) => {
   next();
 };
 
-module.exports = { protect, adminOnly, optionalAuth };
+module.exports = { protect, adminOnly, optionalAuth, authorizeRoles };

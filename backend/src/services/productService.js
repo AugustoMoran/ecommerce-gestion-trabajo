@@ -59,7 +59,9 @@ const getProducts = async ({ page = 1, limit = 12, categoria, search, sort, sinS
 };
 
 const getProductById = async (id) => {
-  const product = await Product.findOne({ _id: id, isActive: true }).populate('categoria', 'nombre');
+  console.log(`[DEBUG] getProductById called with id: ${id}`);
+  const product = await Product.findOne({ _id: id, isActive: true });
+  console.log(`[DEBUG] Query result:`, product ? `Found - ${product.nombre}` : 'Not found');
   if (!product) throw Object.assign(new Error('Producto no encontrado.'), { statusCode: 404 });
   return product;
 };
@@ -76,9 +78,20 @@ const getRelatedProducts = async (productId, categoriaId, limit = 4) => {
 
 const sanitizeProductData = (data) => {
   const clean = { ...data };
+  // Mantener todos los campos de precios
   if (!clean.categoria) delete clean.categoria;
   if (!clean.descripcion) clean.descripcion = '';
   if (!clean.precioOferta) clean.precioOferta = null;
+  if (!clean.priceOfferUSD) clean.priceOfferUSD = null;
+  if (!clean.priceOfferPesos) clean.priceOfferPesos = null;
+  // Asegurar que al menos uno de los campos de precio esté presente
+  if (!clean.priceUSD && !clean.pricePesos && !clean.precio) {
+    throw Object.assign(new Error('Al menos un precio (USD o ARS) es requerido.'), { statusCode: 400 });
+  }
+  // Si incluye instalación pero no tiene zonas, asignar AMBA y CABA por defecto
+  if (clean.hasInstallation && (!clean.installationZones || clean.installationZones.length === 0)) {
+    clean.installationZones = ['AMBA', 'CABA'];
+  }
   return clean;
 };
 

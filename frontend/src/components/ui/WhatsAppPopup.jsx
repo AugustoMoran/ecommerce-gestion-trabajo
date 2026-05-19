@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { FaWhatsapp } from 'react-icons/fa';
 import { HiX, HiSparkles } from 'react-icons/hi';
 import { useGetPopupConfigQuery } from '../../services/popupApi';
+import config from '../../config/app';
 
 // Imagen default: shopping premium (Unsplash, libre de derechos)
 const DEFAULT_IMAGE =
@@ -12,7 +13,7 @@ const DEFAULTS = {
   descripcion:
     'Hablá con nosotros por WhatsApp y te ayudamos a encontrar exactamente lo que necesitás.',
   ctaTexto: 'Hablar por WhatsApp',
-  whatsappNumero: '5491100000000',
+  whatsappNumero: config.whatsappNumber,
   mensajePrellenado:
     'Hola, estuve viendo la página y me gustaría recibir atención personalizada.',
   imagen: DEFAULT_IMAGE,
@@ -101,7 +102,7 @@ const WhatsAppPopup = () => {
           <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/60 to-transparent" />
 
           {/* Badge premium */}
-          <div className="absolute top-3 left-3 flex items-center gap-1 bg-primary-400 text-gray-900 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+          <div className="absolute top-3 left-3 flex items-center gap-1 bg-primary-400 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
             <HiSparkles size={10} />
             Exclusivo
           </div>

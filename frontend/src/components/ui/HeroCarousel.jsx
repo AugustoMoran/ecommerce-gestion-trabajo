@@ -95,12 +95,12 @@ const HeroCarousel = () => {
       >
         {slides.map((slide) => (
           <SwiperSlide key={slide._id}>
-            <div className="relative w-full h-full overflow-hidden bg-white">
+            <div className="relative w-full h-full overflow-hidden bg-gray-950">
               {/* Video o Imagen */}
               {slide.esVideoValido ? (
                 <video
                   src={slide.video}
-                  className="absolute inset-0 w-full h-full object-contain bg-white"
+                  className="absolute inset-0 w-full h-full object-contain bg-gray-950"
                   autoPlay
                   loop
                   muted
@@ -110,7 +110,7 @@ const HeroCarousel = () => {
                 <img
                   src={slide.imagen}
                   alt={slide.titulo || 'Banner'}
-                  className="absolute inset-0 w-full h-full object-contain bg-white"
+                  className="absolute inset-0 w-full h-full object-contain bg-gray-950"
                   loading="lazy"
                 />
               ) : null}
@@ -136,7 +136,7 @@ const HeroCarousel = () => {
                     {slide.mostrarBoton && slide.ctaTexto?.trim() && (
                       <Link
                         to={slide.ctaLink || '/'}
-                        className="inline-flex items-center gap-2 bg-primary-400 text-gray-900 font-bold px-8 py-3 rounded-full shadow-lg hover:bg-primary-300 transition-all hover:scale-105 active:scale-95"
+                        className="inline-flex items-center gap-2 bg-primary-400 text-white font-bold px-8 py-3 rounded-full shadow-lg hover:bg-primary-500 transition-all hover:scale-105 active:scale-95"
                       >
                         {slide.ctaTexto}
                       </Link>

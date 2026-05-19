@@ -142,7 +142,7 @@ const OrdersAdmin = () => {
                   <select
                     value={order.estadoPago}
                     onChange={(e) => handleUpdate(order._id, { estadoPago: e.target.value })}
-                    className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
+                    className="text-xs border border-gray-700 rounded-lg px-2 py-1 bg-gray-800 text-gray-100"
                   >
                     {PAGO_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
                   </select>
@@ -151,7 +151,7 @@ const OrdersAdmin = () => {
                   <select
                     value={order.estadoEnvio}
                     onChange={(e) => handleUpdate(order._id, { estadoEnvio: e.target.value })}
-                    className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
+                    className="text-xs border border-gray-700 rounded-lg px-2 py-1 bg-gray-800 text-gray-100"
                   >
                     {ENVIO_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
                   </select>
@@ -188,7 +188,7 @@ const OrdersAdmin = () => {
               {expandedOrderId === order._id && (
                 <tr className="bg-gray-50 border-b">
                   <td colSpan={8} className="px-4 py-4">
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 text-gray-100">
                       <h4 className="font-semibold text-sm mb-3">Detalles del pedido</h4>
                       <div className="overflow-x-auto">
                         <table className="w-full text-xs">
@@ -260,7 +260,7 @@ const OrdersAdmin = () => {
               onClick={() => setPage(i + 1)}
               disabled={isFetching}
               className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
-                page === i + 1 ? 'bg-primary-600 text-white' : 'bg-white border hover:bg-gray-50'
+                page === i + 1 ? 'bg-primary-400 text-white' : 'bg-gray-800 border border-gray-700 text-gray-100 hover:bg-gray-700'
               }`}
             >
               {i + 1}

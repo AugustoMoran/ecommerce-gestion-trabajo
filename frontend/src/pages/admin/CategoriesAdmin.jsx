@@ -89,24 +89,24 @@ const CategoriesAdmin = () => {
         {isLoading ? (
           Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="card p-4 animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-1/2 mb-2" />
-              <div className="h-3 bg-gray-100 rounded" />
+              <div className="h-4 bg-gray-800 rounded w-1/2 mb-2" />
+              <div className="h-3 bg-gray-800 rounded" />
             </div>
           ))
         ) : categories.map((c) => (
           <div key={c._id} className="card p-4 flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
-              <span className="text-primary-700 font-bold">{c.nombre[0]}</span>
+            <div className="w-10 h-10 bg-primary-900 rounded-lg flex items-center justify-center">
+              <span className="text-primary-400 font-bold">{c.nombre[0]}</span>
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-medium truncate">{c.nombre}</p>
               {c.descripcion && <p className="text-xs text-gray-400 truncate">{c.descripcion}</p>}
             </div>
             <div className="flex gap-1">
-              <button onClick={() => handleEdit(c)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
+              <button onClick={() => handleEdit(c)} className="p-1.5 rounded-lg hover:bg-gray-800 text-gray-400">
                 <HiOutlinePencil size={14} />
               </button>
-              <button onClick={() => handleDelete(c._id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-400">
+              <button onClick={() => handleDelete(c._id)} className="p-1.5 rounded-lg hover:bg-gray-800 text-red-400">
                 <HiOutlineTrash size={14} />
               </button>
             </div>

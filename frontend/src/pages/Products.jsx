@@ -124,7 +124,7 @@ const Products = () => {
                     key={opt.value}
                     onClick={() => updateFilter('sort', opt.value)}
                     className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                      sort === opt.value ? 'bg-primary-50 text-primary-700 font-medium' : 'hover:bg-gray-50'
+                      sort === opt.value ? 'bg-primary-900 text-primary-300 font-medium' : 'hover:bg-gray-800'
                     }`}
                   >
                     {opt.label}
@@ -140,7 +140,7 @@ const Products = () => {
                   <button
                     onClick={() => updateFilter('categoria', '')}
                     className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                      !categoria ? 'bg-primary-50 text-primary-700 font-medium' : 'hover:bg-gray-50'
+                      !categoria ? 'bg-primary-900 text-primary-300 font-medium' : 'hover:bg-gray-800'
                     }`}
                   >
                     Todas
@@ -150,7 +150,7 @@ const Products = () => {
                       key={cat._id}
                       onClick={() => updateFilter('categoria', cat._id)}
                       className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                        categoria === cat._id ? 'bg-primary-50 text-primary-700 font-medium' : 'hover:bg-gray-50'
+                        categoria === cat._id ? 'bg-primary-900 text-primary-300 font-medium' : 'hover:bg-gray-800'
                       }`}
                     >
                       {cat.nombre}
@@ -189,11 +189,11 @@ const Products = () => {
                 {isFetching &&
                   Array.from({ length: 4 }).map((_, i) => (
                     <div key={i} className="card animate-pulse">
-                      <div className="aspect-square bg-gray-200" />
+                      <div className="aspect-square bg-gray-800" />
                       <div className="p-3 space-y-2">
-                        <div className="h-3 bg-gray-200 rounded" />
-                        <div className="h-4 bg-gray-200 rounded w-3/4" />
-                        <div className="h-4 bg-gray-200 rounded w-1/2" />
+                        <div className="h-3 bg-gray-800 rounded" />
+                        <div className="h-4 bg-gray-800 rounded w-3/4" />
+                        <div className="h-4 bg-gray-800 rounded w-1/2" />
                       </div>
                     </div>
                   ))}

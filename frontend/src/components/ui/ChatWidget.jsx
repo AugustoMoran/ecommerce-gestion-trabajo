@@ -31,7 +31,7 @@ function ProductCard({ product, onAddToCart, onBuyNow }) {
   const price = Number.isFinite(priceNum) && priceNum > 0 ? formatCurrency(priceNum) : 'Sin precio';
 
   return (
-    <div className="flex flex-col gap-1.5 p-2 rounded-lg border border-pearl-dark bg-white hover:border-primary-400 transition-colors w-full">
+    <div className="flex flex-col gap-1.5 p-2 rounded-lg border border-gray-700 bg-gray-900 hover:border-primary-400 transition-colors w-full">
       {/* Top row: image, name, price */}
       <div className="flex items-start gap-2">
         {image ? (
@@ -47,8 +47,8 @@ function ProductCard({ product, onAddToCart, onBuyNow }) {
         )}
 
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-ink truncate">{name}</p>
-          <p className="text-xs font-bold text-primary-600">{price}</p>
+          <p className="text-xs font-medium text-gray-100 truncate">{name}</p>
+          <p className="text-xs font-bold text-primary-400">{price}</p>
         </div>
       </div>
 
@@ -56,7 +56,7 @@ function ProductCard({ product, onAddToCart, onBuyNow }) {
       <div className="flex gap-1">
         <button
           onClick={() => onAddToCart(product)}
-          className="flex-1 px-2 py-1 text-xs rounded-md bg-primary-400 hover:bg-primary-500 text-ink font-medium transition-colors flex items-center justify-center gap-1"
+          className="flex-1 px-2 py-1 text-xs rounded-md bg-primary-400 hover:bg-primary-500 text-white font-medium transition-colors flex items-center justify-center gap-1"
           title="Agregar al carrito"
         >
           <FiShoppingCart size={12} />
@@ -64,7 +64,7 @@ function ProductCard({ product, onAddToCart, onBuyNow }) {
         </button>
         <button
           onClick={() => onBuyNow(product)}
-          className="flex-1 px-2 py-1 text-xs rounded-md bg-ink hover:bg-ink/80 text-white font-medium transition-colors flex items-center justify-center gap-1"
+          className="flex-1 px-2 py-1 text-xs rounded-md bg-gray-700 hover:bg-gray-600 text-gray-100 font-medium transition-colors flex items-center justify-center gap-1"
           title="Comprar ahora"
         >
           <FiArrowRight size={12} />
@@ -83,7 +83,7 @@ function Message({ msg, onAddToCart, onBuyNow }) {
       {/* Avatar */}
       {!isUser && (
         <div className="w-7 h-7 rounded-full bg-primary-400 flex items-center justify-center flex-shrink-0 mt-0.5">
-          <RiRobot2Line size={15} className="text-ink" />
+          <RiRobot2Line size={15} className="text-gray-900" />
         </div>
       )}
 
@@ -92,8 +92,8 @@ function Message({ msg, onAddToCart, onBuyNow }) {
         <div
           className={`px-3 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
             isUser
-              ? 'bg-primary-400 text-ink rounded-tr-sm'
-              : 'bg-white border border-pearl-dark text-ink rounded-tl-sm shadow-sm'
+              ? 'bg-primary-400 text-white rounded-tr-sm'
+              : 'bg-gray-900 border border-gray-700 text-gray-100 rounded-tl-sm shadow-sm'
           }`}
         >
           {msg.text}
@@ -304,7 +304,7 @@ export default function ChatWidget() {
             {loading && <TypingIndicator />}
 
             {error && (
-              <p className="text-xs text-red-500 text-center py-1 px-3 bg-red-50 rounded-lg">
+              <p className="text-xs text-red-400 text-center py-1 px-3 bg-gray-800 rounded-lg">
                 {error}
               </p>
             )}
@@ -319,7 +319,7 @@ export default function ChatWidget() {
                 <button
                   key={s}
                   onClick={() => { setInput(s); setTimeout(handleSend, 0); }}
-                  className="text-xs px-2.5 py-1 rounded-full border border-primary-400 text-primary-600 hover:bg-primary-400 hover:text-ink transition-colors"
+                  className="text-xs px-2.5 py-1 rounded-full border border-primary-400 text-primary-400 hover:bg-primary-400 hover:text-gray-900 transition-colors"
                 >
                   {s}
                 </button>
@@ -337,7 +337,7 @@ export default function ChatWidget() {
               placeholder="Escribí tu consulta..."
               rows={1}
               disabled={loading}
-              className="flex-1 resize-none rounded-xl border border-pearl-dark bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/40 focus:outline-none focus:border-primary-400 transition-colors disabled:opacity-60 max-h-24 overflow-y-auto"
+              className="flex-1 resize-none rounded-xl border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-100 placeholder:text-gray-500 focus:outline-none focus:border-primary-400 transition-colors disabled:opacity-60 max-h-24 overflow-y-auto"
               style={{ lineHeight: '1.4' }}
             />
             <button
@@ -346,7 +346,7 @@ export default function ChatWidget() {
               className="w-9 h-9 rounded-xl bg-primary-400 flex items-center justify-center hover:bg-primary-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
               aria-label="Enviar"
             >
-              <FiSend size={15} className="text-ink" />
+              <FiSend size={15} className="text-white" />
             </button>
           </div>
         </div>
@@ -361,7 +361,7 @@ export default function ChatWidget() {
         {open ? (
           <FiX size={20} color="white" />
         ) : (
-          <RiRobot2Line size={22} color="#FACC15" />
+          <RiRobot2Line size={22} color="#FF0000" />
         )}
 
         {/* Unread badge */}

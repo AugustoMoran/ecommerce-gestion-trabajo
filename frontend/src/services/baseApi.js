@@ -5,16 +5,9 @@ const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 const baseQuery = fetchBaseQuery({
   baseUrl: BASE_URL,
-  credentials: 'include', // 🔒 Cookies enviadas automáticamente (accessToken + refreshToken)
-  prepareHeaders: (headers, { getState }) => {
-    // Fallback: si las cookies fallan (ej: móvil), envía el token en header Authorization
-    const state = getState();
-    const token = state.auth.accessToken;
-    
-    if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
-    }
-    
+  credentials: 'include', // HttpOnly cookies sent automatically by browser
+  prepareHeaders: (headers) => {
+    // NO Authorization header needed - tokens in HttpOnly cookies only
     return headers;
   },
 });
@@ -23,24 +16,19 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
   let result = await baseQuery(args, api, extraOptions);
 
   if (result.error?.status === 401) {
-    // Try to refresh on any 401 (expired token, missing token, etc.)
+    // Try to refresh tokens using HttpOnly cookies
     const refreshResult = await baseQuery(
       { url: '/auth/refresh', method: 'POST' },
       api,
       extraOptions
     );
 
-    if (refreshResult.data?.accessToken) {
-      const state = api.getState();
-      api.dispatch(
-        setCredentials({
-          accessToken: refreshResult.data.accessToken,
-          user: state.auth.user,
-        })
-      );
-      // Retry original request with new token
+    if (refreshResult.data) {
+      // Backend automatically updated HttpOnly cookies
+      // Just retry the original request
       result = await baseQuery(args, api, extraOptions);
     } else {
+      // Refresh failed - user must login again
       api.dispatch(logout());
     }
   }
@@ -51,6 +39,6 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
 export const baseApi = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithReauth,
-  tagTypes: ['Product', 'Category', 'Order', 'Cart', 'User', 'Coupon', 'Upload', 'Banner', 'Popup'],
+  tagTypes: ['Product', 'Category', 'Order', 'Cart', 'User', 'Coupon', 'Upload', 'Banner', 'Popup', 'Job', 'ExchangeRate'],
   endpoints: () => ({}),
 });

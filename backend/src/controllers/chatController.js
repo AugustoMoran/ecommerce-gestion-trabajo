@@ -12,41 +12,40 @@
  */
 
 const Product = require('../models/Product');
-const { fuzzyMatch } = require('../../ai-ecommerce-engine/utils/fuzzyMatch');
-const {
-  createAIEngine,
-  createRecommendationPlugin,
-  createAnalyticsPlugin,
-} = require('../../ai-ecommerce-engine');
+const chatIntentService = require('../services/chatIntentService');
 
-// ─── Engine initialisation (singleton) ───────────────────────────────────────
+// Simple fuzzy matching utility (Levenshtein distance based)
+const fuzzyMatch = (term, candidates, threshold = 0.6) => {
+  const levenshtein = (a, b) => {
+    const matrix = [];
+    for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+    for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+    for (let i = 1; i <= b.length; i++) {
+      for (let j = 1; j <= a.length; j++) {
+        matrix[i][j] = b.charAt(i - 1) === a.charAt(j - 1)
+          ? matrix[i - 1][j - 1]
+          : Math.min(matrix[i - 1][j - 1] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j] + 1);
+      }
+    }
+    return matrix[b.length][a.length];
+  };
+  const maxLen = Math.max(term.length, ...candidates.map(c => c.length));
+  return candidates.filter(c => {
+    const distance = levenshtein(term, c);
+    const similarity = 1 - (distance / maxLen);
+    return similarity >= threshold;
+  });
+};
 
-const analyticsPlugin = createAnalyticsPlugin({
-  onEvent: process.env.NODE_ENV === 'development' ? async () => {} : null,
-});
+// ─── Engine initialisation (simplified mock, real ai-ecommerce-engine not deployed) ─
 
-const recommendationPlugin = createRecommendationPlugin({
-  maxRecommendations:    4,
-  priceTolerancePercent: 35,
-  productPoolSize:       30,
-});
+// Mock AI Engine - when the real engine is deployed, replace this block
+const engine = {
+  getStats: () => ({ requestsProcessed: 0, cacheSizeBytes: 0, status: 'mock' }),
+  clearCache: () => console.log('[MOCK] Cache cleared'),
+  processQuery: async (msg) => ({ type: 'search', results: [] }),
+};
 
-const engine = createAIEngine({
-  mode:             process.env.AI_ENGINE_MODE || 'balanced',
-  provider:         process.env.AI_PROVIDER   || 'gemini',
-  fallbackProvider: process.env.AI_FALLBACK   || 'huggingface',
-  fallbackEnabled:  process.env.AI_FALLBACK   ? true : false,
-  useCache:         true,
-  cacheTTL:         5 * 60 * 1000,
-  maxProducts:      5,
-  maxAIRequestsPerMinute: Number(process.env.AI_RPM) || 20,
-
-  geminiApiKey:      process.env.GEMINI_API_KEY,
-  huggingfaceApiKey: process.env.HUGGINGFACE_API_KEY,
-  openaiApiKey:      process.env.OPENAI_API_KEY,
-
-  plugins: [recommendationPlugin, analyticsPlugin],
-});
 
 // ─── Dependency adapter ───────────────────────────────────────────────────────
 
@@ -145,7 +144,7 @@ function buildDependencies() {
 // ─── Route handlers ───────────────────────────────────────────────────────────
 
 async function handleChat(req, res) {
-  const { message } = req.body;
+  const { message, context = {} } = req.body;
 
   if (!message || typeof message !== 'string' || message.trim().length === 0) {
     return res.status(400).json({ error: 'El campo "message" es requerido.' });
@@ -181,6 +180,12 @@ async function handleChat(req, res) {
     .replace(/\bteléfono[s]?\b/g, 'celular')
     .replace(/\bzapatillas?\b/g, 'zapatilla'));
 
+  // ── Special intents (non-product): greeting, orders, installation, jobs, etc. ─
+  // Checked before the product-search chain so they always take priority.
+  // Returns null if no special intent matched → falls through to existing logic.
+  const specialResponse = chatIntentService.detectSpecialIntent(msg, msgNorm, context);
+  if (specialResponse) return res.json(specialResponse);
+
   // Known product category keywords (for category-scoped price filtering and honest "not found")
   const PRODUCT_KEYWORDS = [
     'remera', 'remeras', 'camiseta', 'camisetas',
@@ -204,6 +209,18 @@ async function handleChat(req, res) {
   }
 
   const productKeyword = extractProductKeyword(msgNorm);
+
+  // ── Dynamic category match (from DB keywords) ──────────────────────────────
+  // Used as fallback when no static productKeyword matched and getProducts finds
+  // nothing: we retry the search using the matched category name.
+  // Non-blocking: awaited lazily only when needed (see generic search branch).
+  let _matchedCat = null; // resolved on demand
+  const getMatchedCat = async () => {
+    if (_matchedCat === undefined) return null;
+    if (_matchedCat !== null) return _matchedCat;
+    _matchedCat = await chatIntentService.matchCategory(msgNorm);
+    return _matchedCat;
+  };
 
   // Pluralize (Spanish rules: ends in vowel → +s, ends in consonant → +es, already plural → keep)
   function pluralize(word) {
@@ -316,20 +333,32 @@ async function handleChat(req, res) {
       selected = results;
       intent   = 'search';
       text     = 'Encontre estos productos:';
-    } else if (productKeyword) {
-      // Specific product searched but not in catalog → honest answer
-      return res.json({
-        text: 'No tenemos ' + pluralize(productKeyword) + ' en este momento',
-        products: [],
-        intent: 'no_results',
-        actions: [],
-      });
     } else {
-      // Vague / greeting / gibberish → show popular as soft catalog
-      const sorted = allActive.slice().sort((a, b) => Number(b.vendidos||0) - Number(a.vendidos||0));
-      selected = sorted.slice(0, 3);
-      intent   = selected.length ? 'catalog' : 'no_results';
-      text     = selected.length ? 'Aca van algunos de nuestros productos mas populares:' : 'No encontre productos con ese criterio';
+      // No direct match → try DB category keywords as fallback query
+      const matchedCat = await getMatchedCat();
+      const catResults = matchedCat
+        ? await dependencies.getProducts(matchedCat.nombre, { limit: 4 })
+        : [];
+
+      if (catResults.length > 0) {
+        selected = catResults;
+        intent   = 'category_search';
+        text     = `Estos son productos de la categoría "${matchedCat.nombre}":`;
+      } else if (productKeyword) {
+        // Specific product searched but not in catalog → honest answer
+        return res.json({
+          text: 'No tenemos ' + pluralize(productKeyword) + ' en este momento',
+          products: [],
+          intent: 'no_results',
+          actions: [],
+        });
+      } else {
+        // Vague / greeting / gibberish → show popular as soft catalog
+        const sorted = allActive.slice().sort((a, b) => Number(b.vendidos||0) - Number(a.vendidos||0));
+        selected = sorted.slice(0, 3);
+        intent   = selected.length ? 'catalog' : 'no_results';
+        text     = selected.length ? 'Aca van algunos de nuestros productos mas populares:' : 'No encontre productos con ese criterio';
+      }
     }
   }
 
@@ -340,7 +369,8 @@ async function handleChat(req, res) {
   const outProducts = selected.slice(0, 4).map(toOut);
   const actions = outProducts.map(p => ({ type: 'view_product', label: 'Ver ' + p.name, url: p.url }));
 
-  return res.json({ text, products: outProducts, intent, actions });
+  // context field allows the frontend to send lastIntent back in the next turn
+  return res.json({ text, products: outProducts, intent, actions, context: { lastIntent: intent } });
 }
 
 /**

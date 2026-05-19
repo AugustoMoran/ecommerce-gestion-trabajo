@@ -125,14 +125,14 @@ const PopupAdmin = () => {
               <FaWhatsapp className="text-green-500" size={24} />
               Popup de WhatsApp
             </h1>
-            <p className="text-gray-500 text-sm mt-1">
+            <p className="text-gray-400 text-sm mt-1">
               Configurá el cartelito que aparece al visitante. Si dejás un campo vacío, se usa el texto por defecto.
             </p>
           </div>
           <button
             type="button"
             onClick={handleReset}
-            className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 border border-gray-300 hover:border-gray-900 px-3 py-1.5 rounded-lg transition-colors"
+            className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200 border border-gray-600 hover:border-gray-400 px-3 py-1.5 rounded-lg transition-colors"
           >
             <HiOutlineRefresh size={15} />
             Restaurar defaults
@@ -143,8 +143,8 @@ const PopupAdmin = () => {
           {/* Toggle activo */}
           <div className="card p-5 flex items-center justify-between">
             <div>
-              <p className="font-semibold text-gray-900">Mostrar popup</p>
-              <p className="text-sm text-gray-500">Activá o desactivá el popup para todos los visitantes</p>
+              <p className="font-semibold text-gray-100">Mostrar popup</p>
+              <p className="text-sm text-gray-400">Activá o desactivá el popup para todos los visitantes</p>
             </div>
             <button
               type="button"
@@ -154,7 +154,7 @@ const PopupAdmin = () => {
               }`}
             >
               <span
-                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-primary-400 rounded-full shadow transition-transform duration-200 ${
                   form.activo ? 'translate-x-6' : 'translate-x-0'
                 }`}
               />
@@ -163,7 +163,7 @@ const PopupAdmin = () => {
 
           {/* Tiempo de aparición */}
           <div className="card p-5">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
+            <label className="block text-sm font-semibold text-gray-100 mb-1">
               Tiempo de aparición (segundos)
             </label>
             <input
@@ -179,7 +179,7 @@ const PopupAdmin = () => {
 
           {/* Imagen */}
           <div className="card p-5">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-gray-100 mb-2">
               Imagen de fondo
             </label>
             {form.imagen ? (
@@ -198,11 +198,11 @@ const PopupAdmin = () => {
                 </button>
               </div>
             ) : (
-              <div className="h-28 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center text-gray-400 text-sm mb-3">
+              <div className="h-28 border-2 border-dashed border-gray-700 rounded-xl flex items-center justify-center text-gray-400 text-sm mb-3">
                 Sin imagen — se usará la imagen por defecto
               </div>
             )}
-            <label className="flex items-center gap-2 cursor-pointer w-fit border border-gray-300 hover:border-gray-900 px-3 py-1.5 rounded-lg text-sm text-gray-600 hover:text-gray-900 transition-colors">
+            <label className="flex items-center gap-2 cursor-pointer w-fit border border-gray-600 hover:border-gray-400 px-3 py-1.5 rounded-lg text-sm text-gray-400 hover:text-gray-200 transition-colors">
               <HiOutlinePhotograph size={16} />
               {uploading ? 'Subiendo...' : 'Subir imagen'}
               <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
@@ -211,7 +211,7 @@ const PopupAdmin = () => {
 
           {/* Video (opcional) */}
           <div className="card p-5">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-gray-100 mb-2">
               Video de fondo (opcional)
             </label>
             {form.video ? (
@@ -229,11 +229,11 @@ const PopupAdmin = () => {
                 </button>
               </div>
             ) : (
-              <div className="h-28 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center text-gray-400 text-sm mb-3">
+              <div className="h-28 border-2 border-dashed border-gray-700 rounded-xl flex items-center justify-center text-gray-400 text-sm mb-3">
                 Sin video — se usará la imagen de fondo
               </div>
             )}
-            <label className="flex items-center gap-2 cursor-pointer w-fit border border-gray-300 hover:border-gray-900 px-3 py-1.5 rounded-lg text-sm text-gray-600 hover:text-gray-900 transition-colors">
+            <label className="flex items-center gap-2 cursor-pointer w-fit border border-gray-600 hover:border-gray-400 px-3 py-1.5 rounded-lg text-sm text-gray-400 hover:text-gray-200 transition-colors">
               <HiOutlineFilm size={16} />
               {uploading ? 'Subiendo...' : 'Subir video'}
               <input type="file" accept="video/*" className="hidden" onChange={handleVideoUpload} disabled={uploading} />
@@ -242,10 +242,10 @@ const PopupAdmin = () => {
 
           {/* Textos */}
           <div className="card p-5 space-y-4">
-            <h2 className="font-semibold text-gray-900 border-b border-gray-100 pb-2">Contenido del popup</h2>
+            <h2 className="font-semibold text-gray-100 border-b border-gray-700 pb-2">Contenido del popup</h2>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Título</label>
+              <label className="block text-sm font-semibold text-gray-100 mb-1">Título</label>
               <input
                 type="text"
                 value={form.titulo}
@@ -256,7 +256,7 @@ const PopupAdmin = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Descripción</label>
+              <label className="block text-sm font-semibold text-gray-100 mb-1">Descripción</label>
               <textarea
                 value={form.descripcion}
                 onChange={(e) => set('descripcion', e.target.value)}
@@ -267,7 +267,7 @@ const PopupAdmin = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Texto del botón CTA</label>
+              <label className="block text-sm font-semibold text-gray-100 mb-1">Texto del botón CTA</label>
               <input
                 type="text"
                 value={form.ctaTexto}
@@ -280,10 +280,10 @@ const PopupAdmin = () => {
 
           {/* WhatsApp */}
           <div className="card p-5 space-y-4">
-            <h2 className="font-semibold text-gray-900 border-b border-gray-100 pb-2">Configuración de WhatsApp</h2>
+            <h2 className="font-semibold text-gray-100 border-b border-gray-700 pb-2">Configuración de WhatsApp</h2>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
+              <label className="block text-sm font-semibold text-gray-100 mb-1">
                 Número de WhatsApp
                 <span className="text-gray-400 font-normal ml-1">(sin + ni espacios, con código de país)</span>
               </label>
@@ -297,7 +297,7 @@ const PopupAdmin = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Mensaje prellenado</label>
+              <label className="block text-sm font-semibold text-gray-100 mb-1">Mensaje prellenado</label>
               <textarea
                 value={form.mensajePrellenado}
                 onChange={(e) => set('mensajePrellenado', e.target.value)}

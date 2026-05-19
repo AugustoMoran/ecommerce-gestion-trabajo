@@ -7,7 +7,7 @@
     scroll-behavior: smooth;
   }
   body {
-    @apply font-sans bg-white text-gray-900 antialiased;
+    @apply font-sans bg-gray-950 text-gray-100 antialiased;
   }
   * {
     @apply box-border;
@@ -15,35 +15,38 @@
 }
 
 @layer components {
-  /* Primary CTA — dark bg + white text (máximo contraste sobre fondo amarillo) */
+  /* Primary CTA — red bg + white text */
   .btn-primary {
-    @apply bg-gray-900 hover:bg-black text-white font-bold px-6 py-2.5 rounded-xl transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm;
+    @apply bg-primary-400 hover:bg-primary-500 text-white font-bold px-6 py-2.5 rounded-xl transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm;
   }
-  /* Secondary — black border, fills black on hover with white text */
+  /* Secondary — blue bg with white text, professional look */
   .btn-secondary {
-    @apply border-2 border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white font-semibold px-6 py-2.5 rounded-xl transition-all duration-200 active:scale-95;
+    @apply bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-xl transition-all duration-200 active:scale-95 shadow-sm;
   }
   .btn-danger {
     @apply bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-xl transition-all duration-200 active:scale-95;
   }
   .input-field {
-    @apply w-full border border-[#EAE8E2] rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-all bg-white;
+    @apply w-full border border-gray-700 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-all bg-gray-800 text-white placeholder-gray-300;
+  }
+  .input-field::placeholder {
+    color: #9ca3af;
   }
   .card {
-    @apply bg-white rounded-2xl shadow-md overflow-hidden;
+    @apply bg-gray-900 rounded-2xl shadow-md overflow-hidden;
   }
   .badge {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
 }
 
-/* Swiper — yellow bullets & arrows */
+/* Swiper — red bullets & arrows */
 .swiper-pagination-bullet-active {
-  background: #FACC15 !important;
+  background: #FF0000 !important;
 }
 .swiper-button-next,
 .swiper-button-prev {
-  color: #FACC15 !important;
+  color: #FF0000 !important;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
 }
 

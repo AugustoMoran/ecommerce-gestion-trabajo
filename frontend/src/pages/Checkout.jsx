@@ -10,6 +10,10 @@ import { formatCurrency } from '../utils/formatCurrency';
 import { generateWhatsAppLink } from '../utils/generateWhatsAppLink';
 import toast from 'react-hot-toast';
 import { FaWhatsapp, FaCreditCard } from 'react-icons/fa';
+import { HiExclamation } from 'react-icons/hi';
+import LocationValidator from '../components/location/LocationValidator';
+import InstallationOption from '../components/location/InstallationOption';
+import { validateCartCurrencies, detectProductCurrency } from '../utils/detectCurrency';
 
 const REQUIRED_GUEST_FIELDS = ['nombre', 'apellido', 'email', 'telefono'];
 
@@ -30,6 +34,12 @@ const Checkout = () => {
   const [couponCode, setCouponCode] = useState('');
   const [couponResult, setCouponResult] = useState(null);
   const [payMethod, setPayMethod] = useState('mercadopago');
+  
+  // Geolocalización e instalación
+  const [locationValidation, setLocationValidation] = useState(null);
+
+  // Validación de monedas
+  const currencyValidation = validateCartCurrencies(items);
 
   if (items.length === 0) {
     return (
@@ -47,7 +57,9 @@ const Checkout = () => {
     color: i.color || null,
   }));
 
-  const finalTotal = couponResult ? Math.max(0, total - couponResult.descuento) : total;
+  const finalTotal = couponResult 
+    ? Math.max(0, total - couponResult.descuento)
+    : total;
 
   const handleApplyCoupon = async () => {
     try {
@@ -60,7 +72,28 @@ const Checkout = () => {
     }
   };
 
+  const handleContactInstallation = () => {
+    // Generar mensaje de WhatsApp para consulta de instalación
+    const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '5491130932799'; // Número por defecto
+    
+    const productList = items
+      .map(item => `${item.cantidad}x ${item.producto?.nombre || 'Producto'}`)
+      .join('\n');
+    
+    const zona = locationValidation?.partido || locationValidation?.provincia || 'mi zona';
+    const message = `Hola! Me interesa consultar sobre la instalacion de los siguientes productos en ${zona}:\n\n${productList}\n\nPor favor, que necesito para coordinar?`;
+    
+    const waLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+    window.open(waLink, '_blank');
+  };
+
   const handleOrder = async (metodoPago) => {
+    // Validar mezcla de monedas en MP
+    if (metodoPago === 'mercadopago' && currencyValidation.hasMixedCurrencies) {
+      toast.error('No puedes pagar en Mercado Pago con divisas mixtas (USD + ARS). Por favor usa WhatsApp.');
+      return;
+    }
+
     if (!user) {
       for (const field of REQUIRED_GUEST_FIELDS) {
         if (!guestData[field]) {
@@ -75,6 +108,8 @@ const Checkout = () => {
         items: orderItems,
         metodoPago,
         cuponCodigo: couponResult ? couponCode : undefined,
+        direccion: user?.direccion || guestData.direccion,
+        esEnAMBA: locationValidation?.esEnAMBA,
         ...(user ? {} : { guestData }),
       };
 
@@ -143,8 +178,28 @@ const Checkout = () => {
                     className="input-field"
                     placeholder="Calle, número, ciudad..."
                   />
+                  <LocationValidator 
+                    direccion={guestData.direccion}
+                    onValidationChange={(esEnAMBA, data) => {
+                      setLocationValidation(data);
+                    }}
+                  />
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Location & Installation */}
+          {(user || guestData.direccion) && locationValidation && (
+            <div className="card p-6">
+              <h2 className="font-semibold text-lg mb-4">Servicio de instalacion</h2>
+              <InstallationOption
+                disponible={locationValidation?.esEnAMBA === true}
+                esEnAMBA={locationValidation?.esEnAMBA}
+                zona={locationValidation?.partido || locationValidation?.provincia || 'tu zona'}
+                productName={items[0]?.producto?.nombre || 'tu compra'}
+                onContactVendor={handleContactInstallation}
+              />
             </div>
           )}
 
@@ -172,7 +227,7 @@ const Checkout = () => {
           <div className="card p-6">
             <h2 className="font-semibold text-lg mb-4">Método de pago</h2>
             <div className="space-y-3">
-              <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${payMethod === 'mercadopago' ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'}`}>
+              <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${payMethod === 'mercadopago' ? 'border-primary-500 bg-primary-900' : 'border-gray-700 hover:border-gray-600'}`}>
                 <input type="radio" value="mercadopago" checked={payMethod === 'mercadopago'} onChange={() => setPayMethod('mercadopago')} className="sr-only" />
                 <FaCreditCard size={20} className={payMethod === 'mercadopago' ? 'text-primary-600' : 'text-gray-400'} />
                 <div>
@@ -180,7 +235,7 @@ const Checkout = () => {
                   <p className="text-xs text-gray-500">Tarjeta, efectivo, transferencia</p>
                 </div>
               </label>
-              <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${payMethod === 'whatsapp' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}>
+              <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${payMethod === 'whatsapp' ? 'border-green-500 bg-green-900' : 'border-gray-700 hover:border-gray-600'}`}>
                 <input type="radio" value="whatsapp" checked={payMethod === 'whatsapp'} onChange={() => setPayMethod('whatsapp')} className="sr-only" />
                 <FaWhatsapp size={20} className={payMethod === 'whatsapp' ? 'text-green-600' : 'text-gray-400'} />
                 <div>
@@ -211,8 +266,19 @@ const Checkout = () => {
 
             {couponResult && (
               <div className="flex justify-between text-sm text-green-600 mb-2">
-                <span>Descuento cupón</span>
+                <span>Descuento cupon</span>
                 <span>-{formatCurrency(couponResult.descuento)}</span>
+              </div>
+            )}
+
+            {/* Alerta de monedas mixtas */}
+            {currencyValidation.hasMixedCurrencies && (
+              <div className="mb-4 p-3 bg-red-900/20 border border-red-700 rounded-lg flex gap-2 items-start">
+                <HiExclamation className="text-red-500 flex-shrink-0 mt-0.5" size={18} />
+                <div className="text-xs text-red-400">
+                  <p className="font-semibold">Carrito con divisas mixtas</p>
+                  <p>Solo puedes pagar con WhatsApp. Mercado Pago no soporta mezcla de USD y ARS.</p>
+                </div>
               </div>
             )}
 
@@ -223,7 +289,7 @@ const Checkout = () => {
 
             <button
               onClick={() => handleOrder(payMethod)}
-              disabled={isLoading}
+              disabled={isLoading || (payMethod === 'mercadopago' && currencyValidation.hasMixedCurrencies)}
               className={`w-full flex items-center justify-center gap-2 font-bold px-6 py-3 rounded-xl transition-all active:scale-95 disabled:opacity-50 ${
                 payMethod === 'whatsapp'
                   ? 'bg-green-500 hover:bg-green-400 text-white'

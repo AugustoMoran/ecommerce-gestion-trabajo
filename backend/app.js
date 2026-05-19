@@ -24,6 +24,19 @@ const bannerRoutes = require('./src/routes/banners');
 const popupRoutes = require('./src/routes/popup');
 const chatRoutes = require('./src/routes/chat');
 const testRoutes = require('./src/routes/test');
+const locationRoutes = require('./src/routes/location');
+
+// NEW: Quote and admin routes
+const quoteRoutes = require('./src/routes/quote');
+const quotesRoutes = require('./src/routes/quotes');
+const adminUserRoutes = require('./src/routes/admin/users');
+const recommendationRoutes = require('./src/routes/admin/recommendations');
+const settingsRoutes = require('./src/routes/settings');
+
+// New isolated modules (do NOT touch ecommerce routes above)
+const jobRoutes = require('./modules/jobs/job.routes');
+const liquidationRoutes = require('./modules/liquidations/liquidation.routes');
+const pdfRoutes = require('./modules/pdf/pdf.routes');
 
 const app = express();
 
@@ -91,6 +104,19 @@ app.use('/api/banners', bannerRoutes);
 app.use('/api/popup', popupRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/test', testRoutes);
+app.use('/api/location', locationRoutes);
+
+// NEW: Quote and admin routes
+app.use('/api/quote', quoteRoutes);
+app.use('/api/quotes', quotesRoutes);
+app.use('/api/admin/users', adminUserRoutes);
+app.use('/api/admin/recommendations', recommendationRoutes);
+app.use('/api/settings', settingsRoutes);
+
+// ── New isolated modules ──────────────────────────────────────────────────────
+app.use('/api/jobs', jobRoutes);
+app.use('/api/liquidations', liquidationRoutes);
+app.use('/api/pdf', pdfRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

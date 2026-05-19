@@ -21,7 +21,7 @@ const productSchema = new mongoose.Schema(
   {
     nombre: { type: String, required: true, trim: true },
     descripcion: { type: String, default: '' },
-    precio: { type: Number, required: true, min: 0 },
+    precio: { type: Number, default: null, min: 0 },
     precioOferta: { type: Number, default: null, min: 0 },
     stock: { type: Number, required: true, min: 0, default: 0 },
     categoria: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
@@ -35,6 +35,19 @@ const productSchema = new mongoose.Schema(
       rango: { type: String, default: '' },
     },
     colores: [colorSchema],
+    
+    // NEW: Pricing en USD y ARS (para sistema profesional multi-moneda)
+    priceUSD: { type: Number, default: null, min: 0 },
+    priceOfferUSD: { type: Number, default: null, min: 0 },
+    pricePesos: { type: Number, default: null, min: 0 },
+    priceOfferPesos: { type: Number, default: null, min: 0 },
+    
+    // NEW: Instalación y zonas
+    hasInstallation: { type: Boolean, default: false },
+    installationZones: {
+      type: [{ type: String, enum: ['AMBA', 'CABA'] }],
+      default: [],
+    },
     
     isActive: { type: Boolean, default: true },
     deletedAt: { type: Date, default: null },

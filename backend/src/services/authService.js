@@ -16,7 +16,7 @@ const register = async ({ nombre, apellido, email, password, telefono }) => {
 };
 
 const login = async (email, password) => {
-  const user = await User.findOne({ email, isActive: true }).select('+password');
+  const user = await User.findOne({ email: email.toLowerCase(), isActive: true }).select('+password');
   if (!user) throw Object.assign(new Error('Credenciales inválidas.'), { statusCode: 401 });
 
   const valid = await user.comparePassword(password);

@@ -125,22 +125,22 @@ const CouponsAdmin = () => {
             {isLoading ? (
               <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Cargando...</td></tr>
             ) : coupons.map((c) => (
-              <tr key={c._id} className="border-b last:border-0 hover:bg-gray-50">
+              <tr key={c._id} className="border-b last:border-0 hover:bg-gray-800">
                 <td className="px-4 py-3 font-mono font-bold">{c.codigo}</td>
                 <td className="px-4 py-3">{c.tipo === 'porcentaje' ? `${c.valor}%` : formatCurrency(c.valor)}</td>
                 <td className="px-4 py-3">{c.minimoCompra ? formatCurrency(c.minimoCompra) : '—'}</td>
                 <td className="px-4 py-3 text-gray-500">{c.usosActuales} / {c.maxUsos || '∞'}</td>
                 <td className="px-4 py-3">
-                  <span className={`badge text-xs ${c.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                  <span className={`badge text-xs ${c.isActive ? 'bg-green-900 text-green-300' : 'bg-gray-800 text-gray-400'}`}>
                     {c.isActive ? 'Activo' : 'Inactivo'}
                   </span>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex gap-2">
-                    <button onClick={() => handleEdit(c)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
+                    <button onClick={() => handleEdit(c)} className="p-1.5 rounded-lg hover:bg-gray-800 text-gray-400">
                       <HiOutlinePencil size={14} />
                     </button>
-                    <button onClick={() => handleDelete(c._id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-400">
+                    <button onClick={() => handleDelete(c._id)} className="p-1.5 rounded-lg hover:bg-gray-800 text-red-400">
                       <HiOutlineTrash size={14} />
                     </button>
                   </div>

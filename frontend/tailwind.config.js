@@ -5,29 +5,29 @@ export default {
     extend: {
       colors: {
         primary: {
-          50:  '#FEFCE8',
-          100: '#FEF9C3',
-          200: '#FEF08A',
-          300: '#FDE047',
-          400: '#FACC15', // main yellow — CTA bg
-          500: '#EAB308', // hover
-          600: '#CA8A04', // deep golden
-          700: '#A16207',
-          800: '#854D0E',
-          900: '#1C1917', // near-black
+          50:  '#F5F5F5',
+          100: '#E8E8E8',
+          200: '#CCCCCC',
+          300: '#999999',
+          400: '#FF0000', // main red — CTA bg
+          500: '#CC0000', // hover red
+          600: '#666666', // medium gray
+          700: '#444444', // dark gray
+          800: '#2A2A2A', // darker gray
+          900: '#000000', // pure black
         },
         accent: {
-          400: '#FACC15',
-          500: '#EAB308',
-          600: '#CA8A04',
+          400: '#FF0000',
+          500: '#CC0000',
+          600: '#999999',
         },
         pearl: {
-          DEFAULT: '#F5F3EE', // body bg
-          dark:    '#EAE8E2', // borders / dividers
+          DEFAULT: '#F5F5F5', // body bg — light gray
+          dark:    '#E8E8E8', // borders / dividers
         },
         ink: {
-          DEFAULT: '#0F0F0F', // near-black for text
-          soft:    '#1A1A1A',
+          DEFAULT: '#000000', // black for text
+          soft:    '#2A2A2A', // dark gray for text
         },
       },
       fontFamily: {

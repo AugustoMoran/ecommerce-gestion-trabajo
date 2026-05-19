@@ -13,41 +13,57 @@ import {
   useRemoveProductVideoMutation,
   useGetProductSuggestionsQuery,
 } from '../../services/productsApi';
+import { useGetExchangeRateQuery, useUpdateExchangeRateMutation } from '../../services/settingsApi';
 import { useUploadImageMutation } from '../../services/cartApi';
 import { formatCurrency } from '../../utils/formatCurrency';
+import { getPriceByRole } from '../../utils/getPriceByRole';
 import toast from 'react-hot-toast';
 import { HiOutlinePlus, HiOutlineTrash, HiOutlinePencil, HiX, HiOutlinePhotograph, HiOutlineSearch, HiOutlineRefresh, HiOutlineFilm } from 'react-icons/hi';
+import { useSelector } from 'react-redux';
+import { selectCurrentUser } from '../../features/auth/authSlice';
 
 const MAX_IMAGES = 7;
-const TALLAS_DISPONIBLES = ['1', '2', '3', '4', '5', '6', '7', '8'];
 
 // Normalizar a strings para consistency (HTML input values son siempre strings)
 const EMPTY = { 
   nombre: '', 
   descripcion: '', 
-  precio: '', 
-  precioOferta: '', 
+  priceUSD: '',
+  pricePesos: '',
   stock: '', 
   categoria: '', 
   tags: '',
-  tallas: { habilitadas: [], rango: '' },
-  colores: []
+  hasInstallation: false,
+  installationZones: ['AMBA', 'CABA']
 };
 
 const normalizeForm = (formData) => ({
   nombre: String(formData.nombre || ''),
   descripcion: String(formData.descripcion || ''),
-  precio: String(formData.precio || ''),
-  precioOferta: String(formData.precioOferta || ''),
+  priceUSD: String(formData.priceUSD || ''),
+  pricePesos: String(formData.pricePesos || ''),
   stock: String(formData.stock || ''),
   categoria: String(formData.categoria || ''),
   tags: String(formData.tags || ''),
-  tallas: formData.tallas || { habilitadas: [], rango: '' },
-  colores: formData.colores || [],
+  hasInstallation: Boolean(formData.hasInstallation || false),
+  installationZones: Array.isArray(formData.installationZones) ? formData.installationZones : ['AMBA', 'CABA'],
 });
 
 const ProductsAdmin = () => {
   const [searchParams] = useSearchParams();
+  const user = useSelector(selectCurrentUser);
+  const { data: rateData, refetch: refetchRate } = useGetExchangeRateQuery();
+  const [updateExchangeRate] = useUpdateExchangeRateMutation();
+  const exchangeRate = rateData?.rate || 1000;
+  const [showExchangeRateModal, setShowExchangeRateModal] = useState(false);
+  const [newExchangeRate, setNewExchangeRate] = useState('');
+  
+  // Cuando se abre el modal, inicializar el input con el valor actual
+  React.useEffect(() => {
+    if (showExchangeRateModal) {
+      setNewExchangeRate(String(exchangeRate || 1000));
+    }
+  }, [showExchangeRateModal, exchangeRate]);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState('');
@@ -55,7 +71,7 @@ const ProductsAdmin = () => {
   const suggestionsRef = useRef(null);
   const sinStock = searchParams.get('sinStock') === '1';
   
-  const { data, isLoading } = useGetProductsQuery({ page, limit: 12, search: search || undefined, categoria: filterCat || undefined, sinStock: sinStock || undefined });
+  const { data, isLoading, refetch: refetchProducts } = useGetProductsQuery({ page, limit: 12, search: search || undefined, categoria: filterCat || undefined, sinStock: sinStock || undefined });
   const { data: categories = [] } = useGetCategoriesQuery();
   const { data: suggestions = [] } = useGetProductSuggestionsQuery(search);
   
@@ -124,46 +140,6 @@ const ProductsAdmin = () => {
     setNewVideoPreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const toggleTalla = (talla) => {
-    setForm((prev) => {
-      const habilitadas = prev.tallas.habilitadas.includes(talla)
-        ? prev.tallas.habilitadas.filter((t) => t !== talla)
-        : [...prev.tallas.habilitadas, talla];
-      return { ...prev, tallas: { ...prev.tallas, habilitadas } };
-    });
-  };
-
-  const agregarColor = () => {
-    if (!nuevoColor.nombre.trim()) {
-      toast.error('El color debe tener un nombre');
-      return;
-    }
-    if (form.colores.length >= 8) {
-      toast.error('Máximo 8 colores por producto');
-      return;
-    }
-    setForm((prev) => ({
-      ...prev,
-      colores: [...prev.colores, { ...nuevoColor }]
-    }));
-    setNuevoColor({ nombre: '', codigo: '#000000', habilitado: true });
-  };
-
-  const removerColor = (index) => {
-    setForm((prev) => ({
-      ...prev,
-      colores: prev.colores.filter((_, i) => i !== index)
-    }));
-  };
-
-  const toggleColorHabilitado = (index) => {
-    setForm((prev) => {
-      const colores = [...prev.colores];
-      colores[index].habilitado = !colores[index].habilitado;
-      return { ...prev, colores };
-    });
-  };
-
   const handleRemoveExistingVideo = async (publicId) => {
     if (!editingProduct) return;
     try {
@@ -175,13 +151,24 @@ const ProductsAdmin = () => {
     }
   };
 
+  const handleRemoveExistingImage = async (publicId) => {
+    if (!editingProduct) return;
+    try {
+      await removeImage({ id: editingProduct._id, publicId }).unwrap();
+      setEditingProduct((prev) => ({ ...prev, imagenes: prev.imagenes.filter((img) => img.publicId !== publicId) }));
+      toast.success('Imagen eliminada');
+    } catch {
+      toast.error('Error al eliminar imagen');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setUploading(true);
     try {
       // Validar que los valores requeridos no sean vacíos
-      if (!form.nombre.trim() || !form.precio) {
-        toast.error('Nombre y Precio son requeridos');
+      if (!form.nombre.trim() || (!form.priceUSD && !form.pricePesos)) {
+        toast.error('Nombre y al menos un precio (USD o ARS) son requeridos');
         setUploading(false);
         return;
       }
@@ -189,13 +176,13 @@ const ProductsAdmin = () => {
       const payload = {
         nombre: form.nombre.trim(),
         descripcion: form.descripcion.trim(),
-        precio: Number(form.precio),
-        precioOferta: form.precioOferta ? Number(form.precioOferta) : undefined,
         stock: Number(form.stock) || 0,
         categoria: form.categoria || undefined,
         tags: form.tags ? form.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
-        tallas: form.tallas,
-        colores: form.colores,
+        priceUSD: form.priceUSD ? Number(form.priceUSD) : undefined,
+        pricePesos: form.pricePesos ? Number(form.pricePesos) : undefined,
+        hasInstallation: form.hasInstallation || false,
+        installationZones: form.hasInstallation ? (form.installationZones || ['AMBA', 'CABA']) : [],
       };
 
       let productId = editing;
@@ -232,7 +219,12 @@ const ProductsAdmin = () => {
       setNewVideoPreviews([]);
       setNuevoColor({ nombre: '', codigo: '#000000', habilitado: true });
     } catch (err) {
-      toast.error(err?.data?.message || 'Error al guardar');
+      const errorMessage = err?.data?.message || 
+                          err?.status?.message || 
+                          err?.message || 
+                          'Error al guardar';
+      console.error('Error detallado:', err);
+      toast.error(errorMessage);
     } finally {
       setUploading(false);
     }
@@ -243,13 +235,13 @@ const ProductsAdmin = () => {
     setForm(normalizeForm({
       nombre: p.nombre,
       descripcion: p.descripcion,
-      precio: p.precio,
-      precioOferta: p.precioOferta,
       stock: p.stock,
       categoria: p.categoria?._id || p.categoria || '',
       tags: p.tags?.join(', ') || '',
-      tallas: p.tallas || { habilitadas: [], rango: '' },
-      colores: p.colores || [],
+      priceUSD: p.priceUSD || '',
+      pricePesos: p.pricePesos || '',
+      hasInstallation: p.hasInstallation || false,
+      installationZones: p.installationZones || ['AMBA', 'CABA'],
     }));
     setEditing(p._id);
     setEditingProduct(p);
@@ -258,7 +250,6 @@ const ProductsAdmin = () => {
     setNewImagePreviews([]);
     setNewVideoFiles([]);
     setNewVideoPreviews([]);
-    setNuevoColor({ nombre: '', codigo: '#000000', habilitado: true });
   };
 
   const handleDelete = async (id) => {
@@ -298,9 +289,18 @@ const ProductsAdmin = () => {
     <AdminLayout>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">Productos</h1>
-        <button onClick={() => { setShowForm(true); setEditing(null); setEditingProduct(null); setForm(EMPTY); setNewImageFiles([]); setNewImagePreviews([]); setNewVideoFiles([]); setNewVideoPreviews([]); setNuevoColor({ nombre: '', codigo: '#000000', habilitado: true }); }} className="btn-primary flex items-center gap-2">
-          <HiOutlinePlus size={16} /> Nuevo producto
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setShowExchangeRateModal(true)} 
+            className="btn-secondary flex items-center gap-2 text-sm"
+            title={`Cotización actual: 1 USD = $${exchangeRate.toLocaleString('es-AR')}`}
+          >
+            <HiOutlineRefresh size={16} /> Cotización: ${exchangeRate.toLocaleString('es-AR')}
+          </button>
+          <button onClick={() => { setShowForm(true); setEditing(null); setEditingProduct(null); setForm(EMPTY); setNewImageFiles([]); setNewImagePreviews([]); setNewVideoFiles([]); setNewVideoPreviews([]); }} className="btn-primary flex items-center gap-2">
+            <HiOutlinePlus size={16} /> Nuevo producto
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -322,14 +322,14 @@ const ProductsAdmin = () => {
           
           {/* Suggestions dropdown */}
           {showSuggestions && search.trim().length > 0 && suggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
               {suggestions.map((product) => (
                 <button
                   key={product._id}
                   onClick={() => handleSuggestionClick(product)}
-                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-amber-50 transition-colors border-b border-slate-100 last:border-b-0 text-left"
+                    className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-700 transition-colors border-b border-gray-700 last:border-b-0 text-left"
                 >
-                  <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+                  <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-800">
                     {product.imagenes?.[0]?.url ? (
                       <img src={product.imagenes[0].url} alt={product.nombre} className="w-full h-full object-cover" />
                     ) : (
@@ -339,9 +339,9 @@ const ProductsAdmin = () => {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{product.nombre}</p>
+                    <p className="text-sm font-medium text-gray-100 truncate">{product.nombre}</p>
                     <p className="text-xs text-gray-500">
-                      ${product.precioOferta ? product.precioOferta.toLocaleString('es-AR') : product.precio.toLocaleString('es-AR')}
+                      ${getPriceByRole(product, user?.role, exchangeRate).toLocaleString('es-AR')}
                     </p>
                   </div>
                 </button>
@@ -351,7 +351,7 @@ const ProductsAdmin = () => {
           
           {/* No results message */}
           {showSuggestions && search.trim().length > 0 && suggestions.length === 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-50 p-4 text-center text-sm text-gray-500">
+            <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 p-4 text-center text-sm text-gray-400">
               No se encontraron productos
             </div>
           )}
@@ -388,14 +388,6 @@ const ProductsAdmin = () => {
               <textarea value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} className="input-field" rows={3} />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Precio *</label>
-              <input type="number" value={form.precio} onChange={(e) => setForm({ ...form, precio: e.target.value })} className="input-field" required min="0" step="0.01" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Precio oferta (opcional)</label>
-              <input type="number" value={form.precioOferta} onChange={(e) => setForm({ ...form, precioOferta: e.target.value })} className="input-field" min="0" step="0.01" />
-            </div>
-            <div>
               <label className="block text-sm font-medium mb-1">Stock</label>
               <input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} className="input-field" required min="0" />
             </div>
@@ -408,120 +400,113 @@ const ProductsAdmin = () => {
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-1">Tags (separados por coma)</label>
-              <input type="text" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} className="input-field" placeholder="verano, oferta, nuevo" />
+              <input type="text" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} className="input-field" placeholder="electrónico, networking, seguridad" />
             </div>
 
-            {/* Tallas section */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-2">Tallas disponibles</label>
-              <div className="flex flex-wrap gap-2">
-                {TALLAS_DISPONIBLES.map((talla) => (
-                  <button
-                    key={talla}
-                    type="button"
-                    onClick={() => toggleTalla(talla)}
-                    className={`px-3 py-2 rounded-lg font-medium border-2 transition-colors ${
-                      form.tallas.habilitadas.includes(talla)
-                        ? 'border-yellow-400 bg-yellow-100 text-gray-900'
-                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    {talla}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-3">
-                <label className="block text-xs font-medium text-gray-600 mb-1">Rango (ej: XS-XL)</label>
+            {/* Precio section */}
+            <div className="md:col-span-2 grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Precio en Dólares (USD)</label>
                 <input
                   type="text"
-                  value={form.tallas.rango}
-                  onChange={(e) => setForm({ ...form, tallas: { ...form.tallas, rango: e.target.value } })}
-                  className="input-field text-sm"
-                  placeholder="Opcional: descripción del rango"
+                  inputMode="decimal"
+                  value={form.priceUSD}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9.]/g, '');
+                    setForm({ ...form, priceUSD: value });
+                  }}
+                  className="input-field"
+                  placeholder="Ej: 50.00"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Precio en Pesos (ARS)</label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={form.pricePesos}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9.]/g, '');
+                    setForm({ ...form, pricePesos: value });
+                  }}
+                  className="input-field"
+                  placeholder="Ej: 55000.00"
                 />
               </div>
             </div>
 
-            {/* Colores section */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-2">Colores ({form.colores.length}/8)</label>
-              
-              {/* Add new color */}
-              <div className="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-2">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Nombre del color</label>
+            {/* Installation section */}
+            <div className="md:col-span-2 grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">¿Incluye instalación?</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
                     <input
-                      type="text"
-                      value={nuevoColor.nombre}
-                      onChange={(e) => setNuevoColor({ ...nuevoColor, nombre: e.target.value })}
-                      className="input-field text-sm"
-                      placeholder="ej: Rojo, Azul oscuro"
+                      type="radio"
+                      name="installation"
+                      value="true"
+                      checked={form.hasInstallation === true}
+                      onChange={() => setForm({ ...form, hasInstallation: true, installationZones: ['AMBA', 'CABA'] })}
+                      className="w-4 h-4"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Código de color</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="color"
-                        value={nuevoColor.codigo}
-                        onChange={(e) => setNuevoColor({ ...nuevoColor, codigo: e.target.value })}
-                        className="w-12 h-9 rounded border border-gray-300 cursor-pointer"
-                      />
-                      <input
-                        type="text"
-                        value={nuevoColor.codigo}
-                        onChange={(e) => setNuevoColor({ ...nuevoColor, codigo: e.target.value })}
-                        className="input-field text-sm flex-1"
-                        placeholder="#000000"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-end">
-                    <button
-                      type="button"
-                      onClick={agregarColor}
-                      disabled={form.colores.length >= 8}
-                      className="w-full btn-primary text-sm"
-                    >
-                      + Agregar color
-                    </button>
-                  </div>
+                    <span className="text-sm text-gray-700">Sí</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="installation"
+                      value="false"
+                      checked={form.hasInstallation === false}
+                      onChange={() => setForm({ ...form, hasInstallation: false })}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm text-gray-700">No</span>
+                  </label>
                 </div>
               </div>
 
-              {/* List of colors */}
-              {form.colores.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {form.colores.map((color, i) => (
-                    <div key={i} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
-                      <div
-                        className="w-8 h-8 rounded-full border-2 border-gray-300 flex-shrink-0"
-                        style={{ backgroundColor: color.codigo }}
-                        title={color.codigo}
+              {/* Zonas de instalación - Solo si incluye instalación */}
+              {form.hasInstallation && (
+                <div className="mt-4 hidden">
+                  <label className="block text-sm font-medium mb-2">Zonas de instalación disponibles</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={form.installationZones?.includes('AMBA') || false}
+                        onChange={(e) => {
+                          const zones = form.installationZones || [];
+                          if (e.target.checked) {
+                            if (!zones.includes('AMBA')) {
+                              setForm({ ...form, installationZones: [...zones, 'AMBA'] });
+                            }
+                          } else {
+                            setForm({ ...form, installationZones: zones.filter(z => z !== 'AMBA') });
+                          }
+                        }}
+                        className="w-4 h-4"
                       />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{color.nombre}</p>
-                        <p className="text-xs text-gray-500">{color.codigo}</p>
-                      </div>
-                      <label className="flex items-center gap-1 cursor-pointer flex-shrink-0">
-                        <input
-                          type="checkbox"
-                          checked={color.habilitado}
-                          onChange={() => toggleColorHabilitado(i)}
-                          className="w-4 h-4"
-                        />
-                        <span className="text-xs text-gray-600">Activo</span>
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => removerColor(i)}
-                        className="p-1 rounded hover:bg-red-50 text-red-400 flex-shrink-0"
-                      >
-                        <HiX size={16} />
-                      </button>
-                    </div>
-                  ))}
+                      <span className="text-sm text-gray-700">AMBA</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={form.installationZones?.includes('CABA') || false}
+                        onChange={(e) => {
+                          const zones = form.installationZones || [];
+                          if (e.target.checked) {
+                            if (!zones.includes('CABA')) {
+                              setForm({ ...form, installationZones: [...zones, 'CABA'] });
+                            }
+                          } else {
+                            setForm({ ...form, installationZones: zones.filter(z => z !== 'CABA') });
+                          }
+                        }}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm text-gray-700">CABA</span>
+                    </label>
+                  </div>
                 </div>
               )}
             </div>
@@ -643,13 +628,13 @@ const ProductsAdmin = () => {
           <tbody>
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i}><td colSpan={5} className="px-4 py-4"><div className="h-4 bg-gray-100 rounded animate-pulse" /></td></tr>
+                <tr key={i}><td colSpan={5} className="px-4 py-4"><div className="h-4 bg-gray-800 rounded animate-pulse" /></td></tr>
               ))
             ) : (data?.products || []).map((p) => (
-              <tr key={p._id} className="border-b last:border-0 hover:bg-gray-50">
+              <tr key={p._id} className="border-b last:border-0 hover:bg-gray-800">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1">
-                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-800 flex-shrink-0">
                       {p.imagenes?.[0]?.url ? (
                         <img src={p.imagenes[0].url} alt="" className="w-full h-full object-cover" />
                       ) : (
@@ -664,7 +649,7 @@ const ProductsAdmin = () => {
                   </div>
                 </td>
                 <td className="px-4 py-3 font-medium max-w-[200px] truncate">{p.nombre}</td>
-                <td className="px-4 py-3">{formatCurrency(p.precioOferta || p.precio)}</td>
+                <td className="px-4 py-3">{formatCurrency(getPriceByRole(p, user?.role, exchangeRate))}</td>
                 <td className="px-4 py-3">
                   {restockId === p._id ? (
                     <div className="flex items-center gap-1">
@@ -673,23 +658,23 @@ const ProductsAdmin = () => {
                         min="1"
                         value={restockQty}
                         onChange={(e) => setRestockQty(e.target.value)}
-                        className="w-16 text-xs border border-gray-300 rounded-lg px-2 py-1"
+                        className="w-16 text-xs border border-gray-700 rounded-lg px-2 py-1 bg-gray-800 text-gray-100"
                         placeholder="Cant."
                         autoFocus
                       />
                       <button onClick={() => handleRestock(p)} className="text-xs px-2 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700">OK</button>
-                      <button onClick={() => { setRestockId(null); setRestockQty(''); }} className="text-xs px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200">✕</button>
+                      <button onClick={() => { setRestockId(null); setRestockQty(''); }} className="text-xs px-2 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-100">✕</button>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <span className={`badge text-xs ${p.stock > 5 ? 'bg-green-100 text-green-700' : p.stock > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-600'}`}>
+                      <span className={`badge text-xs ${p.stock > 5 ? 'bg-green-900 text-green-300' : p.stock > 0 ? 'bg-primary-900 text-primary-400' : 'bg-red-900 text-red-400'}`}>
                         {p.stock}
                       </span>
                       {p.stock <= 5 && (
                         <button
                           onClick={() => { setRestockId(p._id); setRestockQty(''); }}
                           title="Reponer stock"
-                          className="p-1 rounded-lg hover:bg-orange-50 text-orange-400"
+                          className="p-1 rounded-lg hover:bg-gray-700 text-primary-400"
                         >
                           <HiOutlineRefresh size={13} />
                         </button>
@@ -699,10 +684,10 @@ const ProductsAdmin = () => {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex gap-2">
-                    <button onClick={() => handleEdit(p)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
+                    <button onClick={() => handleEdit(p)} className="p-1.5 rounded-lg hover:bg-gray-800 text-gray-400">
                       <HiOutlinePencil size={14} />
                     </button>
-                    <button onClick={() => handleDelete(p._id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-400">
+                    <button onClick={() => handleDelete(p._id)} className="p-1.5 rounded-lg hover:bg-gray-800 text-red-400">
                       <HiOutlineTrash size={14} />
                     </button>
                   </div>
@@ -718,10 +703,92 @@ const ProductsAdmin = () => {
         <div className="flex justify-center gap-2 mt-6">
           {Array.from({ length: data.pages }).map((_, i) => (
             <button key={i} onClick={() => setPage(i + 1)}
-              className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${page === i + 1 ? 'bg-primary-600 text-white' : 'bg-white border hover:bg-gray-50'}`}>
+              className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${page === i + 1 ? 'bg-primary-400 text-white' : 'bg-gray-800 border border-gray-700 text-gray-100 hover:bg-gray-700'}`}>
               {i + 1}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* Exchange Rate Modal */}
+      {showExchangeRateModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <HiOutlineRefresh size={20} /> Actualizar Cotización
+              </h2>
+              <button onClick={() => setShowExchangeRateModal(false)} className="text-gray-400 hover:text-gray-200">
+                <HiX size={20} />
+              </button>
+            </div>
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2">1 Dólar (USD) = ? Pesos (ARS)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={newExchangeRate}
+                onChange={(e) => {
+                  setNewExchangeRate(e.target.value);
+                }}
+                className="input-field"
+                placeholder="Ej: 1000"
+              />
+              <p className="text-xs text-gray-400 mt-2">Cotización actual: ${exchangeRate.toLocaleString('es-AR')}</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowExchangeRateModal(false)}
+                className="btn-secondary flex-1"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  console.log('💬 Input value:', newExchangeRate, 'Type:', typeof newExchangeRate);
+                  const newRate = parseFloat(newExchangeRate);
+                  console.log('💬 Parsed rate:', newRate);
+                  
+                  if (!newRate || newRate <= 0 || isNaN(newRate)) {
+                    toast.error('Ingresá una cotización válida mayor a 0');
+                    return;
+                  }
+                  
+                  try {
+                    console.log('🔄 [1] Enviando mutation con:', newRate);
+                    const result = await updateExchangeRate(newRate).unwrap();
+                    console.log('✅ [2] Response del backend:', result);
+                    
+                    // Esperar que RTK Query invalide la caché
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    console.log('⏳ [3] Esperó 500ms para invalidación');
+                    
+                    // Refetchear manualmente
+                    console.log('🔄 [4] Iniciando refetch de rate y products...');
+                    const rateRefetch = await refetchRate();
+                    const productsRefetch = await refetchProducts();
+                    console.log('✅ [5] Rate refetch:', rateRefetch);
+                    console.log('✅ [5] Products refetch:', productsRefetch);
+                    
+                    toast.success(`✅ Cotización actualizada: 1 USD = $${newRate.toLocaleString('es-AR')}`);
+                    console.log('✅ [6] Toast mostrado, cerrando modal');
+                    
+                    // Cerrar modal después de completar todo
+                    setShowExchangeRateModal(false);
+                  } catch (err) {
+                    console.error('❌ [ERROR]:', err);
+                    console.error('❌ Error status:', err?.status);
+                    console.error('❌ Error data:', err?.data);
+                    toast.error('❌ Error al actualizar cotización: ' + (err?.data?.message || err?.message || 'Error desconocido'));
+                  }
+                }}
+                className="btn-primary flex-1"
+              >
+                Actualizar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </AdminLayout>

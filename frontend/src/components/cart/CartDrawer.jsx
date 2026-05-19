@@ -1,11 +1,12 @@
 import React from 'react';
 import { useDispatch } from 'react-redux';
-import { HiX, HiOutlineTrash, HiOutlineShoppingBag } from 'react-icons/hi';
+import { HiX, HiOutlineTrash, HiOutlineShoppingBag, HiExclamation } from 'react-icons/hi';
 import { Link } from 'react-router-dom';
 import { closeCart, selectCartIsOpen } from '../../features/cart/cartSlice';
 import { useSelector } from 'react-redux';
 import useCart from '../../hooks/useCart';
 import { formatCurrency } from '../../utils/formatCurrency';
+import { detectProductCurrency, getProductPrice, validateCartCurrencies } from '../../utils/detectCurrency';
 
 const CartDrawer = () => {
   const dispatch = useDispatch();
@@ -22,7 +23,7 @@ const CartDrawer = () => {
 
       {/* Drawer */}
       <div
-        className={`fixed top-0 right-0 h-full w-full max-w-sm bg-white z-50 shadow-2xl flex flex-col transition-transform duration-300 ${
+        className={`fixed top-0 right-0 h-full w-full max-w-sm bg-gray-900 z-50 shadow-2xl flex flex-col transition-transform duration-300 ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
@@ -35,7 +36,7 @@ const CartDrawer = () => {
               <span className="badge bg-primary-100 text-primary-700">{items.length}</span>
             )}
           </div>
-          <button onClick={() => dispatch(closeCart())} className="p-1.5 rounded-lg hover:bg-gray-100">
+          <button onClick={() => dispatch(closeCart())} className="p-1.5 rounded-lg hover:bg-gray-800 text-gray-400">
             <HiX size={20} />
           </button>
         </div>
@@ -55,55 +56,69 @@ const CartDrawer = () => {
               </Link>
             </div>
           ) : (
-            <ul className="space-y-4">
-              {items.map((item) => {
-                const producto = item.producto;
-                const id = producto?._id || producto;
-                const price = Number(producto?.precioOferta || producto?.precio || 0) || 0;
-                const imagen = producto?.imagenes?.[0]?.url || '';
-                const nombre = producto?.nombre || item.nombre || 'Producto sin nombre';
+            <>
+              {/* Validación de mezcla de monedas */}
+              {validateCartCurrencies(items).hasMixedCurrencies && (
+                <div className="mb-4 p-3 bg-red-900/20 border border-red-700 rounded-lg flex gap-2 items-start">
+                  <HiExclamation className="text-red-500 flex-shrink-0 mt-0.5" size={18} />
+                  <div className="text-xs text-red-400">
+                    <p className="font-semibold">Carrito con divisas mixtas</p>
+                    <p>No puedes mezclar productos en USD y ARS. Deberás pagar solo en una moneda.</p>
+                  </div>
+                </div>
+              )}
 
-                return (
-                  <li key={id} className="flex gap-3">
-                    <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                      {imagen && <img src={imagen} alt={nombre} className="w-full h-full object-cover" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium line-clamp-2 mb-1">{nombre}</p>
-                      <div className="text-xs text-gray-500 mb-2 space-y-0.5">
-                        <p>{formatCurrency(price)} c/u</p>
-                        {item.talla && <p>Talla: <span className="font-medium">{item.talla}</span></p>}
-                        {item.color && <p>Color: <span className="font-medium">{item.color}</span></p>}
+              <ul className="space-y-4">
+                {items.map((item) => {
+                  const producto = item.producto;
+                  const id = producto?._id || producto;
+                  const currency = detectProductCurrency(producto) || 'ARS';
+                  const price = getProductPrice(producto);
+                  const imagen = producto?.imagenes?.[0]?.url || '';
+                  const nombre = producto?.nombre || item.nombre || 'Producto sin nombre';
+
+                  return (
+                    <li key={id} className="flex gap-3">
+                      <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-800 flex-shrink-0">
+                        {imagen && <img src={imagen} alt={nombre} className="w-full h-full object-cover" />}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => updateQuantity(id, item.cantidad - 1, item.talla, item.color)}
-                          className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center text-sm hover:bg-gray-100"
-                        >
-                          -
-                        </button>
-                        <span className="text-sm font-medium w-5 text-center">{item.cantidad}</span>
-                        <button
-                          onClick={() => updateQuantity(id, item.cantidad + 1, item.talla, item.color)}
-                          className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center text-sm hover:bg-gray-100"
-                        >
-                          +
-                        </button>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium line-clamp-2 mb-1">{nombre}</p>
+                        <div className="text-xs text-gray-500 mb-2 space-y-0.5">
+                          <p>{formatCurrency(price)} {currency} c/u</p>
+                          {item.talla && <p>Talla: <span className="font-medium">{item.talla}</span></p>}
+                          {item.color && <p>Color: <span className="font-medium">{item.color}</span></p>}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => updateQuantity(id, item.cantidad - 1, item.talla, item.color)}
+                            className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center text-sm hover:bg-gray-100"
+                          >
+                            -
+                          </button>
+                          <span className="text-sm font-medium w-5 text-center">{item.cantidad}</span>
+                          <button
+                            onClick={() => updateQuantity(id, item.cantidad + 1, item.talla, item.color)}
+                            className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center text-sm hover:bg-gray-100"
+                          >
+                            +
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex flex-col items-end justify-between">
-                      <button
-                        onClick={() => removeFromCart(id, item.talla, item.color)}
-                        className="text-gray-400 hover:text-red-500 transition-colors p-1"
-                      >
-                        <HiOutlineTrash size={16} />
-                      </button>
-                      <span className="text-sm font-bold">{formatCurrency(price * item.cantidad)}</span>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+                      <div className="flex flex-col items-end justify-between">
+                        <button
+                          onClick={() => removeFromCart(id, item.talla, item.color)}
+                          className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                        >
+                          <HiOutlineTrash size={16} />
+                        </button>
+                        <span className="text-sm font-bold">{formatCurrency(price * item.cantidad)}</span>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
           )}
         </div>
 

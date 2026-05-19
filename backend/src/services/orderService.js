@@ -2,6 +2,7 @@ const Order = require('../models/Order');
 const Product = require('../models/Product');
 const Coupon = require('../models/Coupon');
 const generateOrderCode = require('../utils/generateOrderCode');
+const { validateLocationAMBA } = require('../utils/geovalidation');
 const {
   sendOrderConfirmationToUser,
   sendOrderNotificationToAdmin,
@@ -79,6 +80,35 @@ const createOrder = async ({ userId, guestData, items, cuponCodigo, metodoPago }
     if (attempts > 20) throw new Error('No se pudo generar código de orden único.');
   } while (await Order.findOne({ codigo }));
 
+  // Validar ubicación (CABA/AMBA)
+  let locationData = {
+    esEnAMBA: null,
+    coordenadas: null,
+    partido: null,
+    provincia: null,
+  };
+
+  const direccion = userId 
+    ? (await require('../models/User').findById(userId))?.direccion 
+    : guestData?.direccion;
+
+  if (direccion) {
+    console.log(`🗺️  Validando ubicación para orden: ${direccion}`);
+    try {
+      const validation = await validateLocationAMBA(direccion);
+      locationData = {
+        esEnAMBA: validation.esEnAMBA,
+        coordenadas: validation.coordenadas,
+        partido: validation.partido,
+        provincia: validation.provincia,
+      };
+      console.log(`✅ Ubicación validada: AMBA=${validation.esEnAMBA}, Partido=${validation.partido}`);
+    } catch (error) {
+      console.error(`❌ Error validando ubicación: ${error.message}`);
+      // Continuar sin fallar - la validación es no-blocking
+    }
+  }
+
   const order = await Order.create({
     codigo,
     usuario: userId || null,
@@ -92,16 +122,19 @@ const createOrder = async ({ userId, guestData, items, cuponCodigo, metodoPago }
     estadoPago: 'pendiente',      // Always start as pending; webhook (MP) or admin (WhatsApp) approves
     estadoEnvio: 'pendiente',     // Always start as pending until admin dispatches
     stockDeducido: false,
+    esEnAMBA: locationData.esEnAMBA,
+    coordenadas: locationData.coordenadas,
+    partido: locationData.partido,
+    provincia: locationData.provincia,
   });
 
   // Stock is NOT deducted here.
   // MercadoPago: deducted in the webhook when payment is approved.
   // WhatsApp: deducted in finalizeOrder when the admin dispatches.
 
-  // Send notifications
-  // For Mercado Pago: email will be sent from the webhook when payment is approved
-  // For WhatsApp: email is sent immediately
+  // Send notifications based on payment method
   if (metodoPago === 'whatsapp') {
+    // For WhatsApp: send both emails immediately
     // Get email from user or guest data
     let emailRecipient = null;
     if (userId) {
@@ -116,18 +149,19 @@ const createOrder = async ({ userId, guestData, items, cuponCodigo, metodoPago }
 
     if (emailRecipient) {
       sendOrderConfirmationToUser(emailRecipient, order)
-        .then(() => console.log(`✅ Email enviado a ${emailRecipient}`))
+        .then(() => console.log(`✅ Email confirmación enviado a ${emailRecipient}`))
         .catch(err => console.error(`❌ Error enviando email a ${emailRecipient}:`, err.message));
     }
+    
+    // Populate usuario before sending admin notification
+    const populatedOrder = await Order.findById(order._id).populate('usuario');
+    sendOrderNotificationToAdmin(populatedOrder)
+      .then(() => console.log(`✅ Notificación admin enviada para orden ${order.codigo}`))
+      .catch(err => console.error(`❌ Error en notificación admin:`, err.message));
   }
   
-  // Populate usuario before sending admin notification
-  const populatedOrder = await Order.findById(order._id).populate('usuario');
-  
-  // Always notify admin (for both MP and WhatsApp)
-  sendOrderNotificationToAdmin(populatedOrder)
-    .then(() => console.log(`✅ Notificación admin enviada para orden ${order.codigo}`))
-    .catch(err => console.error(`❌ Error en notificación admin:`, err.message));
+  // For Mercado Pago: emails will be sent from the webhook when payment is approved
+  // (both customer confirmation and admin notification)
 
   return order;
 };

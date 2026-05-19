@@ -16,8 +16,8 @@ const register = async (req, res, next) => {
       await authService.mergeGuestCart(user._id, req.body.guestCart);
     }
 
+    // Response does NOT include accessToken - it's in HttpOnly cookie only
     res.status(201).json({
-      accessToken,
       user: {
         _id: user._id,
         nombre: user.nombre,
@@ -46,13 +46,15 @@ const login = async (req, res, next) => {
       await authService.mergeGuestCart(user._id, req.body.guestCart);
     }
 
+    // Response does NOT include accessToken - it's in HttpOnly cookie only
     res.json({
-      accessToken,
       user: {
         _id: user._id,
         nombre: user.nombre,
         apellido: user.apellido,
         email: user.email,
+        telefono: user.telefono,
+        zone: user.zone,
         role: user.role,
       },
     });
@@ -72,7 +74,8 @@ const refresh = async (req, res, next) => {
     setAccessTokenCookie(res, accessToken);
     setRefreshTokenCookie(res, refreshToken);
 
-    res.json({ accessToken });
+    // Response does NOT include accessToken - it's in HttpOnly cookie only
+    res.json({ message: 'Token refreshed' });
   } catch (error) {
     next(error);
   }
@@ -99,6 +102,7 @@ const getMe = (req, res) => {
     telefono: req.user.telefono,
     direccion: req.user.direccion,
     role: req.user.role,
+    zone: req.user.zone,
     favoritos: req.user.favoritos,
   });
 };

@@ -6,6 +6,8 @@ const categorySchema = new mongoose.Schema(
     descripcion: { type: String, default: '' },
     imagen: { type: String, default: '' },
     imagenPublicId: { type: String, default: '' },
+    // Keywords used by the chatbot for dynamic context building
+    keywords: [{ type: String, trim: true }],
     isActive: { type: Boolean, default: true },
     deletedAt: { type: Date, default: null },
   },

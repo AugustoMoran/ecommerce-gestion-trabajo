@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const Cart = require('../models/Cart');
-const { sendOrderConfirmationToUser } = require('../utils/sendNotifications');
+const { sendOrderConfirmationToUser, sendOrderNotificationToAdmin } = require('../utils/sendNotifications');
 
 const mercadopagoWebhook = async (req, res, next) => {
   try {
@@ -85,7 +85,7 @@ const mercadopagoWebhook = async (req, res, next) => {
       await order.save();
       console.log(`💾 Orden actualizada: ${order.codigo}`);
 
-      // Send confirmation email when payment is approved
+      // Send confirmation emails when payment is approved (both customer and admin)
       if (estadoPago === 'aprobado') {
         let emailRecipient = null;
         if (order.usuario) {
@@ -98,19 +98,40 @@ const mercadopagoWebhook = async (req, res, next) => {
           emailRecipient = order.guestData?.email;
         }
 
-        console.log(`📧 Enviando email a: ${emailRecipient}`);
+        console.log(`📧 Enviando emails para orden aprobada: ${order.codigo}`);
 
+        // Send to customer
         if (emailRecipient) {
           sendOrderConfirmationToUser(emailRecipient, order)
-            .then(() => console.log(`✅ Email MP enviado a ${emailRecipient}`))
-            .catch(err => console.error(`❌ Error enviando email MP a ${emailRecipient}:`, err.message));
+            .then(() => console.log(`✅ Email de confirmación enviado a cliente: ${emailRecipient}`))
+            .catch(err => console.error(`❌ Error enviando email a cliente ${emailRecipient}:`, err.message));
         } else {
           console.error(`❌ Sin emailRecipient para orden ${order.codigo}`);
         }
+
+        // Send to admin
+        const populatedOrder = await Order.findById(order._id).populate('usuario');
+        sendOrderNotificationToAdmin(populatedOrder)
+          .then(() => console.log(`✅ Notificación admin enviada para orden ${order.codigo}`))
+          .catch(err => console.error(`❌ Error en notificación admin para ${order.codigo}:`, err.message));
       }
 
       // IMPORTANT: Stock is deducted ONLY when admin finalizes the order via finalizeOrder endpoint,
       // NOT when payment is approved. This allows admin control over the dispatch process.
+
+      // ── Non-blocking PDF receipt generation (does not affect webhook flow) ──
+      if (estadoPago === 'aprobado') {
+        const { generateAndUploadPDF } = require('../../modules/pdf/pdf.service');
+        const populatedOrder = await Order.findById(order._id).populate(
+          'usuario',
+          'nombre apellido email telefono direccion'
+        );
+        if (populatedOrder) {
+          generateAndUploadPDF(populatedOrder.toObject(), 'PAGADO')
+            .then((url) => console.log(`📄 PDF comprobante generado: ${url}`))
+            .catch((err) => console.error('❌ Error generando PDF comprobante:', err.message));
+        }
+      }
     }
 
     res.sendStatus(200);

@@ -35,19 +35,19 @@ const Dashboard = () => {
         <StatCard icon={HiOutlineClipboardList} label="Pedidos" value={ordersData?.total ?? '—'} color="bg-blue-500" />
         <StatCard icon={HiOutlineCurrencyDollar} label="Ingresos aprobados" value={formatCurrency(totalRevenue)} color="bg-green-500" />
         <StatCard icon={HiOutlineCube} label="Productos" value={productsData?.total ?? '—'} color="bg-purple-500" />
-        <StatCard icon={HiOutlineShoppingBag} label="Almacenamiento" value={storage ? `${storage.percentage}%` : '—'} color={storage?.alert ? 'bg-red-500' : 'bg-orange-400'} />
+        <StatCard icon={HiOutlineShoppingBag} label="Almacenamiento" value={storage ? `${storage.percentage}%` : '—'} color={storage?.alert ? 'bg-red-600' : 'bg-primary-400'} />
       </div>
 
       {/* Storage error notice */}
       {storage?.available === false && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6 text-yellow-700 text-sm">
+        <div className="bg-primary-900 border border-primary-700 rounded-xl p-4 mb-6 text-primary-300 text-sm">
           ⚠️ No se pudo cargar la información de almacenamiento. Verificando conexión con Cloudinary...
         </div>
       )}
 
       {/* Storage warning */}
       {storage?.alert && storage?.available !== false && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-red-700 text-sm">
+        <div className="bg-red-900 border border-red-700 rounded-xl p-4 mb-6 text-red-300 text-sm">
           ⚠️ El almacenamiento de imágenes está al {storage.percentage}% ({storage.usedMB} MB de {storage.limitMB} MB).
         </div>
       )}
@@ -69,14 +69,14 @@ const Dashboard = () => {
             </thead>
             <tbody>
               {(ordersData?.orders || []).map((order) => (
-                <tr key={order._id} className="border-b last:border-0 hover:bg-gray-50">
+                <tr key={order._id} className="border-b last:border-0 hover:bg-gray-800">
                   <td className="px-5 py-3 font-mono font-bold text-primary-600">{order.codigo}</td>
-                  <td className="px-5 py-3 text-gray-600">
+                  <td className="px-5 py-3 text-gray-400">
                     {order.usuario ? `${order.usuario.nombre} ${order.usuario.apellido}` : order.guestData?.nombre}
                   </td>
                   <td className="px-5 py-3 font-medium">{formatCurrency(order.total)}</td>
                   <td className="px-5 py-3">
-                    <span className="badge bg-blue-100 text-blue-700 capitalize">{order.estadoEnvio}</span>
+                    <span className="badge bg-blue-900 text-blue-300 capitalize">{order.estadoEnvio}</span>
                   </td>
                 </tr>
               ))}

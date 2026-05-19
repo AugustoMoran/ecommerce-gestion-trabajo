@@ -1,15 +1,40 @@
 import { baseApi } from './baseApi';
+import { setCredentials, logout } from '../features/auth/authSlice';
 
 export const authApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     register: builder.mutation({
       query: (data) => ({ url: '/auth/register', method: 'POST', body: data }),
+      async onQueryStarted(_, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(setCredentials({ user: data.user }));
+        } catch {
+          // Component handles error display
+        }
+      },
     }),
     login: builder.mutation({
       query: (data) => ({ url: '/auth/login', method: 'POST', body: data }),
+      async onQueryStarted(_, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(setCredentials({ user: data.user }));
+        } catch {
+          // Component handles error display
+        }
+      },
     }),
     logout: builder.mutation({
       query: () => ({ url: '/auth/logout', method: 'POST' }),
+      async onQueryStarted(_, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          dispatch(logout());
+        } catch {
+          dispatch(logout());
+        }
+      },
     }),
     getMe: builder.query({
       query: () => '/auth/me',
@@ -28,7 +53,7 @@ export const authApi = baseApi.injectEndpoints({
       invalidatesTags: ['User'],
     }),
   }),
-  overrideExisting: false,
+  overrideExisting: true,
 });
 
 export const {

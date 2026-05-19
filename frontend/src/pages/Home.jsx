@@ -38,8 +38,8 @@ const Home = () => {
         {/* Featured products */}
         <section className="py-8">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Más vendidos</h2>
-            <Link to="/productos?sort=popular" className="text-gray-900 hover:text-gray-600 text-sm font-semibold flex items-center gap-1">
+            <h2 className="text-2xl font-bold text-gray-100">Más vendidos</h2>
+            <Link to="/productos?sort=popular" className="text-gray-100 hover:text-primary-400 text-sm font-semibold flex items-center gap-1">
               Ver todo <HiArrowRight size={16} />
             </Link>
           </div>
@@ -52,7 +52,7 @@ const Home = () => {
         {categories.length > 0 && (
           <section className="py-12">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Categorías</h2>
+              <h2 className="text-2xl font-bold text-gray-100">Categorías</h2>
               <Link to="/productos" className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center gap-1">
                 Ver todo <HiArrowRight size={16} />
               </Link>
@@ -70,7 +70,7 @@ const Home = () => {
               <h2 className="text-2xl sm:text-3xl font-extrabold mb-2">¡Comprá con confianza!</h2>
               <p className="text-gray-400">Pagá por Mercado Pago o WhatsApp. Envíos a todo el país.</p>
             </div>
-            <Link to="/productos" className="bg-primary-400 text-gray-900 font-bold px-8 py-3 rounded-full hover:bg-primary-300 transition-all whitespace-nowrap flex-shrink-0 shadow-lg">
+            <Link to="/productos" className="bg-primary-400 text-white font-bold px-8 py-3 rounded-full hover:bg-primary-500 transition-all whitespace-nowrap flex-shrink-0 shadow-lg">
               Ver productos
             </Link>
           </div>
@@ -79,8 +79,8 @@ const Home = () => {
         {/* New products */}
         <section className="py-8 pb-16">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Novedades</h2>
-            <Link to="/productos?sort=newest" className="text-gray-900 hover:text-gray-600 text-sm font-semibold flex items-center gap-1">
+            <h2 className="text-2xl font-bold text-gray-100">Novedades</h2>
+            <Link to="/productos?sort=newest" className="text-gray-100 hover:text-primary-400 text-sm font-semibold flex items-center gap-1">
               Ver todo <HiArrowRight size={16} />
             </Link>
           </div>

@@ -16,8 +16,8 @@ const GRADIENTS = [
   { label: 'Verde', value: 'from-emerald-900/70 to-transparent' },
   { label: 'Rojo', value: 'from-red-900/70 to-transparent' },
   { label: 'Naranja', value: 'from-orange-900/70 to-transparent' },
-  { label: 'Amarillo', value: 'from-yellow-600/60 to-transparent' },
-  { label: 'Amarillo claro', value: 'from-yellow-400/50 to-transparent' },
+  { label: 'Rojo', value: 'from-primary-600/60 to-transparent' },
+  { label: 'Rojo claro', value: 'from-primary-400/50 to-transparent' },
   { label: 'Negro', value: 'from-gray-900/80 to-transparent' },
   { label: 'Blanco', value: 'from-white/50 to-transparent' },
   { label: 'Gris claro', value: 'from-gray-200/50 to-transparent' },
@@ -178,7 +178,7 @@ const BannersAdmin = () => {
           </div>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Toggle: Mostrar campos de texto */}
-            <div className="md:col-span-2 flex items-center gap-2 bg-gray-50 p-3 rounded">
+            <div className="md:col-span-2 flex items-center gap-2 bg-gray-800 p-3 rounded">
               <input
                 type="checkbox"
                 id="mostrarTexto"
@@ -390,14 +390,14 @@ const BannersAdmin = () => {
                   className="w-28 h-16 object-cover rounded flex-shrink-0 bg-gray-800"
                 />
               ) : (
-                <div className="w-28 h-16 bg-gray-300 rounded flex-shrink-0 flex items-center justify-center">
-                  <HiOutlinePhotograph size={24} className="text-gray-500" />
+                <div className="w-28 h-16 bg-gray-800 rounded flex-shrink-0 flex items-center justify-center">
+                  <HiOutlinePhotograph size={24} className="text-gray-600" />
                 </div>
               )}
               <div className="flex-1 min-w-0">
                 <p className="font-semibold truncate">{b.titulo}</p>
-                <p className="text-sm text-gray-500 truncate">{b.subtitulo}</p>
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-sm text-gray-400 truncate">{b.subtitulo}</p>
+                <p className="text-xs text-gray-500 mt-1">
                   Orden: {b.orden} · Link: {b.ctaLink}
                 </p>
               </div>
@@ -406,21 +406,21 @@ const BannersAdmin = () => {
                   onClick={() => handleToggle(b)}
                   className={`text-xs px-3 py-1 rounded-full font-medium ${
                     b.activo
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-gray-100 text-gray-500'
+                      ? 'bg-green-900 text-green-300'
+                      : 'bg-gray-800 text-gray-400'
                   }`}
                 >
                   {b.activo ? 'Activo' : 'Inactivo'}
                 </button>
                 <button
                   onClick={() => handleEdit(b)}
-                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                  className="p-2 text-blue-400 hover:bg-gray-800 rounded-lg"
                 >
                   <HiOutlinePencil size={16} />
                 </button>
                 <button
                   onClick={() => handleDelete(b._id)}
-                  className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                  className="p-2 text-red-400 hover:bg-gray-800 rounded-lg"
                 >
                   <HiOutlineTrash size={16} />
                 </button>

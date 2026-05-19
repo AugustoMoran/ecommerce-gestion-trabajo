@@ -1,14 +1,28 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FaInstagram, FaWhatsapp, FaTiktok } from 'react-icons/fa';
+import { FaInstagram, FaWhatsapp } from 'react-icons/fa';
 import { HiMail, HiPhone } from 'react-icons/hi';
 import config from '../../config/app';
 
 const Footer = () => {
   const waNumber = config.whatsappNumber;
   const instagramUrl = config.instagramUrl;
-  const tiktokUrl = config.tiktokUrl;
   const storeName = config.storeName;
+  const logoUrl = config.logoUrl;
+  const email = config.contactEmail;
+  const phone = config.contactPhone;
+
+  const sucursal1 = {
+    nombre: config.sucursal1Nombre,
+    direccion: config.sucursal1Direccion,
+    detalles: config.sucursal1Detalles,
+  };
+
+  const sucursal2 = {
+    nombre: config.sucursal2Nombre,
+    direccion: config.sucursal2Direccion,
+    detalles: config.sucursal2Detalles,
+  };
 
   return (
     <footer className="bg-[#0D0D0D] text-gray-300 mt-16">
@@ -16,9 +30,11 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
           {/* Brand */}
           <div className="md:col-span-2">
-            <div className="flex items-center gap-3 mb-6">
-              <img src="/logo.png" alt="Logo" className="h-40 w-auto" />
-            </div>
+            {logoUrl && (
+              <div className="flex items-center gap-3 mb-6">
+                <img src={logoUrl} alt="Logo" className="h-64 w-auto object-contain" />
+              </div>
+            )}
             <p className="text-xl font-extrabold text-white tracking-widest mb-6 text-center md:text-left uppercase drop-shadow-lg">
               {storeName}
             </p>
@@ -41,15 +57,6 @@ const Footer = () => {
               >
                 <FaInstagram size={40} className="text-white" />
               </a>
-              <a
-                href={tiktokUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-20 h-20 bg-gray-900 rounded-full flex items-center justify-center hover:bg-gray-800 transition-all transform hover:scale-110 shadow-lg border-2 border-gray-700"
-                aria-label="TikTok"
-              >
-                <FaTiktok size={40} className="text-white" />
-              </a>
             </div>
           </div>
 
@@ -69,14 +76,14 @@ const Footer = () => {
             <h3 className="font-semibold text-white mb-4">📍 Sucursales</h3>
             <ul className="space-y-3 text-sm">
               <li className="hover:text-white transition-colors">
-                <p className="font-medium text-yellow-400">Moron - Local 1</p>
-                <p className="text-gray-400">25 de mayo 136</p>
-                <p className="text-gray-400">Galería Ciudad Local 25</p>
+                <p className="font-medium text-primary-400">{sucursal1.nombre}</p>
+                <p className="text-gray-400">{sucursal1.direccion}</p>
+                {sucursal1.detalles && <p className="text-gray-400">{sucursal1.detalles}</p>}
               </li>
               <li className="hover:text-white transition-colors">
-                <p className="font-medium text-yellow-400">Moron - Local 2</p>
-                <p className="text-gray-400">Av Rivadavia 18252</p>
-                <p className="text-gray-400">Local 6</p>
+                <p className="font-medium text-primary-400">{sucursal2.nombre}</p>
+                <p className="text-gray-400">{sucursal2.direccion}</p>
+                {sucursal2.detalles && <p className="text-gray-400">{sucursal2.detalles}</p>}
               </li>
             </ul>
           </div>
@@ -97,12 +104,22 @@ const Footer = () => {
                   Instagram
                 </a>
               </li>
-              <li className="flex items-center gap-2">
-                <FaTiktok size={14} className="text-gray-300" />
-                <a href={tiktokUrl} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
-                  TikTok
-                </a>
-              </li>
+              {email && (
+                <li className="flex items-center gap-2">
+                  <HiMail size={14} className="text-blue-400" />
+                  <a href={`mailto:${email}`} className="hover:text-white transition-colors">
+                    Email
+                  </a>
+                </li>
+              )}
+              {phone && (
+                <li className="flex items-center gap-2">
+                  <HiPhone size={14} className="text-orange-400" />
+                  <a href={`tel:${phone}`} className="hover:text-white transition-colors">
+                    Llamar
+                  </a>
+                </li>
+              )}
             </ul>
           </div>
         </div>

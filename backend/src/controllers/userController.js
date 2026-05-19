@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const { validateLocationAMBA } = require('../utils/geovalidation');
 
 const getProfile = (req, res) => {
   res.json(req.user);
@@ -12,7 +13,21 @@ const updateProfile = async (req, res, next) => {
       if (req.body[field] !== undefined) updates[field] = req.body[field];
     });
 
-    const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true });
+    // Auto-compute zone when address fields change
+    const dir = updates.direccion;
+    if (dir) {
+      const addressStr = [dir.calle, dir.ciudad, dir.provincia].filter(Boolean).join(', ');
+      if (addressStr.trim()) {
+        try {
+          const geoResult = await validateLocationAMBA(addressStr);
+          updates.zone = geoResult.esEnAMBA ? (geoResult.caba ? 'CABA' : 'AMBA') : null;
+        } catch {
+          // If geocoding fails, don't block the save - keep current zone
+        }
+      }
+    }
+
+    const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true }).select('-password');
     res.json(user);
   } catch (error) {
     next(error);

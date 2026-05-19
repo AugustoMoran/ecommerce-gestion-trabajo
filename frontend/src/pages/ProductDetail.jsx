@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useGetProductQuery, useGetRelatedProductsQuery } from '../services/productsApi';
 import { useToggleFavoriteMutation, useGetMeQuery } from '../services/authApi';
+import { useGetExchangeRateQuery } from '../services/settingsApi';
 import { formatCurrency } from '../utils/formatCurrency';
+import { getPriceByRole, getCurrencyByRole } from '../utils/getPriceByRole';
 import useCart from '../hooks/useCart';
 import { useSelector } from 'react-redux';
 import { selectCurrentUser } from '../features/auth/authSlice';
@@ -16,19 +18,27 @@ const ProductDetail = () => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const user = useSelector(selectCurrentUser);
+  
+  // ⚠️ TODOS LOS HOOKS AL INICIO - ANTES DE ANY EARLY RETURNS
   const { data: product, isLoading, error } = useGetProductQuery(id);
   const { data: related = [] } = useGetRelatedProductsQuery(id, { skip: !product });
-  const { data: me } = useGetMeQuery(undefined, { skip: !user });
+  const { data: me, refetch: refetchMe } = useGetMeQuery(); // SIEMPRE ejecutar - las cookies HTTP-only validarán autenticación
+  const { data: rateData } = useGetExchangeRateQuery();
   const [toggleFavorite] = useToggleFavoriteMutation();
+  
+  // State hooks
   const [selectedImage, setSelectedImage] = useState(0);
   const [qty, setQty] = useState(1);
   const [selectedTalla, setSelectedTalla] = useState(null);
   const [selectedColor, setSelectedColor] = useState(null);
 
   // Scroll to top when component mounts or when product changes
+  // TAMBIÉN refetch el usuario para asegurar que tiene datos frescos
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [id]);
+    // Refetch user data para asegurar que tenemos la zona actualizada
+    refetchMe();
+  }, [id, refetchMe]);
 
   const handleBuyWithMP = () => {
     const needsTalla = product.tallas?.habilitadas?.length > 0;
@@ -45,11 +55,11 @@ const ProductDetail = () => {
   if (isLoading) return (
     <div className="max-w-7xl mx-auto px-4 py-12">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 animate-pulse">
-        <div className="aspect-square bg-gray-200 rounded-2xl" />
+        <div className="aspect-square bg-gray-800 rounded-2xl" />
         <div className="space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-3/4" />
-          <div className="h-6 bg-gray-200 rounded w-1/4" />
-          <div className="h-20 bg-gray-200 rounded" />
+          <div className="h-8 bg-gray-800 rounded w-3/4" />
+          <div className="h-6 bg-gray-800 rounded w-1/4" />
+          <div className="h-20 bg-gray-800 rounded" />
         </div>
       </div>
     </div>
@@ -63,8 +73,12 @@ const ProductDetail = () => {
   );
 
   const isFavorite = me?.favoritos?.includes(product._id);
-  const displayPrice = product.precioOferta || product.precio;
-  const hasDiscount = product.precioOferta && product.precioOferta < product.precio;
+  const exchangeRate = rateData?.rate || 1000;
+  const currency = getCurrencyByRole(user?.role);
+  
+  // Usar función para obtener precio según rol CON conversión
+  const displayPrice = getPriceByRole(product, user?.role, exchangeRate);
+
   
   // Combinar imágenes y videos en un carrusel
   const media = [];
@@ -83,6 +97,25 @@ const ProductDetail = () => {
     displayPrice * qty
   );
 
+  // Verificar si la instalación está disponible para el usuario
+  // NO depende del rol, solo de si el producto tiene instalación y el usuario está en AMBA/CABA
+  const canRequestInstallation = () => {
+    // Si el producto no tiene instalación, no mostrar opción
+    if (!product.hasInstallation) {
+      return false;
+    }
+    
+    // Si el usuario no está autenticado (me es undefined), no mostrar
+    if (!me) {
+      return false;
+    }
+    
+    // Verificar si está en AMBA/CABA
+    const userInAMBA = me?.zone === 'AMBA' || me?.zone === 'CABA';
+    
+    return userInAMBA;
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Breadcrumb */}
@@ -99,7 +132,7 @@ const ProductDetail = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-16">
         {/* Media Carousel */}
         <div>
-          <div className="rounded-2xl overflow-hidden bg-white mb-3 relative group">
+          <div className="rounded-2xl overflow-hidden bg-gray-900 mb-3 relative group">
             {media[selectedImage]?.type === 'video' ? (
               <video
                 src={media[selectedImage]?.url}
@@ -173,32 +206,55 @@ const ProductDetail = () => {
             <p className="text-sm text-gray-400">{product.categoria?.nombre}</p>
             <button
               onClick={() => toggleFavorite(product._id)}
-              className="p-2 rounded-xl hover:bg-gray-100 transition-colors flex-shrink-0"
+              className="p-2 rounded-xl hover:bg-gray-800 transition-colors flex-shrink-0 text-gray-400"
             >
               {isFavorite ? <HiHeart size={22} className="text-red-500" /> : <HiOutlineHeart size={22} className="text-gray-400" />}
             </button>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">{product.nombre}</h1>
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">{product.nombre}</h1>
 
-          <div className="flex items-baseline gap-3 mb-4">
-            <span className="text-3xl font-extrabold text-gray-900">{formatCurrency(displayPrice)}</span>
-            {hasDiscount && (
-              <>
-                <span className="text-lg text-gray-400 line-through">{formatCurrency(product.precio)}</span>
-                <span className="badge bg-red-100 text-red-600 font-bold">
-                  -{Math.round(((product.precio - product.precioOferta) / product.precio) * 100)}%
-                </span>
-              </>
-            )}
+          <div className="flex items-baseline gap-3 mb-6 p-4 bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl">
+            <div className="flex items-baseline gap-2">
+              <span className="text-5xl font-extrabold text-white">
+                {formatCurrency(displayPrice, currency)}
+              </span>
+              <span className="text-2xl font-bold text-white">
+                {currency}
+              </span>
+            </div>
           </div>
 
           <p className="text-gray-600 leading-relaxed mb-6">{product.descripcion}</p>
 
+          {/* Admin: Mostrar ambos precios */}
+          {user?.role === 'admin' && (
+            <div className="mb-6 p-4 bg-gray-800 rounded-lg border border-gray-700">
+              <p className="text-xs font-semibold text-gray-400 mb-2">🔐 ADMIN - Precios Multi-Moneda</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-gray-400">Precio USD</p>
+                  <p className="text-lg font-bold text-blue-400">
+                    ${(product.priceUSD || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    {product.priceOfferUSD && <span className="text-sm text-red-400"> (Oferta: ${(product.priceOfferUSD).toLocaleString('es-AR', { minimumFractionDigits: 2 })})</span>}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">Precio ARS</p>
+                  <p className="text-lg font-bold text-green-400">
+                    ${(product.pricePesos || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    {product.priceOfferPesos && <span className="text-sm text-red-400"> (Oferta: ${(product.priceOfferPesos).toLocaleString('es-AR', { minimumFractionDigits: 2 })})</span>}
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mt-2">Cotización: 1 USD = ${exchangeRate.toLocaleString('es-AR')}</p>
+            </div>
+          )}
+
           {/* Stock */}
           <div className="mb-6">
             {product.stock > 0 ? (
-              <span className="badge bg-green-100 text-green-700">✓ En stock ({product.stock} disponibles)</span>
+              <span className="badge bg-green-900 text-green-300">✓ En stock ({product.stock} disponibles)</span>
             ) : (
               <span className="badge bg-red-100 text-red-600">Sin stock</span>
             )}
@@ -217,8 +273,8 @@ const ProductDetail = () => {
                     onClick={() => setSelectedTalla(talla)}
                     className={`px-4 py-2 border-2 rounded-lg font-medium transition-all ${
                       selectedTalla === talla
-                        ? 'border-yellow-400 bg-yellow-400 text-gray-900'
-                        : 'border-gray-300 text-gray-600 hover:border-yellow-300'
+                        ? 'border-primary-400 bg-primary-400 text-white'
+                        : 'border-gray-700 text-gray-400 hover:border-primary-400'
                     }`}
                   >
                     {talla}
@@ -243,7 +299,7 @@ const ProductDetail = () => {
                     className={`relative w-12 h-12 rounded-lg border-2 transition-all ${
                       selectedColor === color.nombre
                         ? 'border-gray-900 ring-2 ring-offset-2 ring-gray-400'
-                        : 'border-gray-300 hover:border-gray-400'
+                        : 'border-gray-700 hover:border-gray-600'
                     } ${!color.habilitado ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                     style={{ backgroundColor: color.codigo }}
                     title={color.nombre}
@@ -262,7 +318,7 @@ const ProductDetail = () => {
             <div className="space-y-3">
               <div className="flex items-center gap-4">
                 <label className="text-sm font-semibold text-gray-900">Cantidad:</label>
-                <div className="flex items-center border border-gray-300 rounded-xl overflow-hidden">
+                <div className="flex items-center border border-gray-700 rounded-xl overflow-hidden bg-gray-800">
                   <button
                     onClick={() => setQty((q) => Math.max(1, q - 1))}
                     className="px-3 py-2 hover:bg-gray-50 text-lg"
@@ -291,6 +347,55 @@ const ProductDetail = () => {
                 <HiOutlineShoppingCart size={20} />
                 Agregar al carrito
               </button>
+
+              {/* Mostrar opción de instalación si está disponible, o mensajes si no */}
+              {product.hasInstallation && (
+                <>
+                  {canRequestInstallation() ? (
+                    <button
+                      onClick={() => {
+                        const needsTalla = product.tallas?.habilitadas?.length > 0;
+                        const needsColor = product.colores?.length > 0;
+                        
+                        if ((needsTalla && !selectedTalla) || (needsColor && !selectedColor)) {
+                          alert('Por favor selecciona talla y color');
+                          return;
+                        }
+                        const installationText = `Quiero solicitar instalación para ${product.nombre}${selectedTalla ? ` (Talla: ${selectedTalla})` : ''}${selectedColor ? ` - Color: ${selectedColor}` : ''} - Cantidad: ${qty}`;
+                        const wa = generateWhatsAppLink([], 0, installationText);
+                        window.open(wa, '_blank');
+                      }}
+                      className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold px-6 py-3 rounded-xl transition-all active:scale-95 shadow-lg"
+                    >
+                      <HiOutlineShoppingCart size={20} />
+                      Solicitar instalación
+                    </button>
+                  ) : (
+                    <div className="w-full bg-gray-800 border border-gray-600 text-gray-300 font-semibold px-6 py-3 rounded-xl text-center">
+                      {!me ? (
+                        <>
+                          <p className="text-sm">📍 Instalación disponible en AMBA/CABA</p>
+                          <p className="text-xs mt-1">
+                            <Link to="/login" className="text-blue-400 hover:text-blue-300 underline">Inicia sesión</Link> para solicitar
+                          </p>
+                        </>
+                      ) : me.zone ? (
+                        <>
+                          <p className="text-sm">📍 Instalación no disponible</p>
+                          <p className="text-xs mt-1">Tu zona ({me.zone}) no tiene cobertura. Solo AMBA/CABA</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm">📍 Zona no configurada</p>
+                          <p className="text-xs mt-1">
+                            <Link to="/perfil" className="text-blue-400 hover:text-blue-300 underline">Configurá tu dirección</Link> para activar instalación (solo AMBA/CABA)
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <button

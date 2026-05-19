@@ -15,10 +15,19 @@ const userSchema = new mongoose.Schema(
       codigoPostal: { type: String, default: '' },
       pais: { type: String, default: 'Argentina' },
     },
-    role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    // NEW: Roles actualizados
+    role: {
+      type: String,
+      enum: ['user', 'admin', 'tecnico', 'despachante', 'gremio'],
+      default: 'user',
+    },
+    // NEW: Zona para instalación (AMBA o CABA)
+    zone: { type: String, enum: ['AMBA', 'CABA', null], default: null },
+    
     favoritos: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
     isActive: { type: Boolean, default: true },
     deletedAt: { type: Date, default: null },
+    lastLogin: { type: Date, default: null },
   },
   { timestamps: true }
 );
