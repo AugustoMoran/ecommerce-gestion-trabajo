@@ -4,7 +4,7 @@ const Product = require('../models/Product');
 const getCart = async (userId) => {
   const cart = await Cart.findOne({ usuario: userId }).populate({
     path: 'items.producto',
-    select: 'nombre precio precioOferta imagenes stock isActive',
+    select: 'nombre precio precioOferta imagenes stock isActive priceUSD priceOfferUSD pricePesos priceOfferPesos',
   });
   return cart || { items: [] };
 };

@@ -1,4 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
+import { getProductPrice, detectProductCurrency } from '../utils/detectCurrency';
 
 const loadFromStorage = () => {
   try {
@@ -77,6 +78,14 @@ export const selectCartCount = (state) =>
   state.cart.items.reduce((sum, i) => sum + i.cantidad, 0);
 export const selectCartTotal = (state) =>
   state.cart.items.reduce((sum, i) => {
-    const price = i.producto?.precioOferta || i.producto?.precio || 0;
+    const price = getProductPrice(i.producto);
     return sum + price * i.cantidad;
   }, 0);
+
+export const selectCartTotalByCurrency = (state) =>
+  state.cart.items.reduce((acc, i) => {
+    const currency = detectProductCurrency(i.producto) || 'ARS';
+    const price = getProductPrice(i.producto);
+    acc[currency] = (acc[currency] || 0) + price * i.cantidad;
+    return acc;
+  }, {});

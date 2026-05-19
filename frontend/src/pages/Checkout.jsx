@@ -13,7 +13,7 @@ import { FaWhatsapp, FaCreditCard } from 'react-icons/fa';
 import { HiExclamation } from 'react-icons/hi';
 import LocationValidator from '../components/location/LocationValidator';
 import InstallationOption from '../components/location/InstallationOption';
-import { validateCartCurrencies, detectProductCurrency } from '../utils/detectCurrency';
+import { validateCartCurrencies, detectProductCurrency, getProductPrice } from '../utils/detectCurrency';
 
 const REQUIRED_GUEST_FIELDS = ['nombre', 'apellido', 'email', 'telefono'];
 
@@ -38,8 +38,21 @@ const Checkout = () => {
   // Geolocalización e instalación
   const [locationValidation, setLocationValidation] = useState(null);
 
-  // Validación de monedas
+  // Totales por moneda (ARS / USD)
+  const totalesPorMoneda = items.reduce((acc, item) => {
+    const currency = detectProductCurrency(item.producto) || 'ARS';
+    const price = getProductPrice(item.producto);
+    acc[currency] = (acc[currency] || 0) + price * item.cantidad;
+    return acc;
+  }, {});
+  const soloARS = Object.keys(totalesPorMoneda).length === 1 && totalesPorMoneda.ARS;
+  const soloUSD = Object.keys(totalesPorMoneda).length === 1 && totalesPorMoneda.USD;
+
   const currencyValidation = validateCartCurrencies(items);
+  const arsBase = totalesPorMoneda.ARS || 0;
+  const finalTotal = couponResult && soloARS
+    ? Math.max(0, arsBase - couponResult.descuento)
+    : arsBase;
 
   if (items.length === 0) {
     return (
@@ -57,13 +70,9 @@ const Checkout = () => {
     color: i.color || null,
   }));
 
-  const finalTotal = couponResult 
-    ? Math.max(0, total - couponResult.descuento)
-    : total;
-
   const handleApplyCoupon = async () => {
     try {
-      const result = await validateCoupon({ codigo: couponCode, subtotal: total }).unwrap();
+      const result = await validateCoupon({ codigo: couponCode, subtotal: arsBase }).unwrap();
       setCouponResult(result);
       toast.success(`Cupón aplicado: -${formatCurrency(result.descuento)}`);
     } catch (err) {
@@ -253,12 +262,15 @@ const Checkout = () => {
             <h2 className="font-semibold text-lg mb-4">Resumen</h2>
             <ul className="divide-y divide-gray-100 mb-4">
               {items.map((item) => {
-                const price = item.producto?.precioOferta || item.producto?.precio || 0;
+                const itemCurrency = detectProductCurrency(item.producto) || 'ARS';
+                const price = getProductPrice(item.producto);
                 const nombre = item.producto?.nombre || '';
                 return (
                   <li key={item.producto?._id || item.producto} className="py-2 flex justify-between text-sm">
                     <span className="text-gray-600 truncate max-w-[60%]">{nombre} <span className="text-gray-400">x{item.cantidad}</span></span>
-                    <span className="font-medium">{formatCurrency(price * item.cantidad)}</span>
+                    <span className="font-medium">
+                      {itemCurrency === 'USD' ? `USD $${(price * item.cantidad).toFixed(2)}` : formatCurrency(price * item.cantidad)}
+                    </span>
                   </li>
                 );
               })}
@@ -282,9 +294,18 @@ const Checkout = () => {
               </div>
             )}
 
-            <div className="flex justify-between font-bold text-lg border-t pt-3 mb-5">
-              <span>Total</span>
-              <span>{formatCurrency(finalTotal)}</span>
+            <div className="border-t pt-3 mb-5 space-y-1">
+              {Object.entries(totalesPorMoneda).map(([currency, amount]) => {
+                const discounted = currency === 'ARS' && couponResult && soloARS
+                  ? Math.max(0, amount - couponResult.descuento)
+                  : amount;
+                return (
+                  <div key={currency} className="flex justify-between font-bold text-lg">
+                    <span>{Object.keys(totalesPorMoneda).length > 1 ? `Total ${currency}` : 'Total'}</span>
+                    <span>{currency === 'USD' ? `USD $${discounted.toFixed(2)}` : formatCurrency(discounted)}</span>
+                  </div>
+                );
+              })}
             </div>
 
             <button

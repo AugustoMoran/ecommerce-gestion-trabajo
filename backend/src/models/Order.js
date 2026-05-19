@@ -50,6 +50,7 @@ const orderSchema = new mongoose.Schema(
     notificacionEnviada: { type: Boolean, default: false },
     codigoUsado: { type: Boolean, default: false },
     stockDeducido: { type: Boolean, default: false },
+    moneda: { type: String, enum: ['ARS', 'USD', 'mixto'], default: 'ARS' },
     // Geolocalización
     esEnAMBA: { type: Boolean, default: null }, // null si no se validó, true/false si se validó
     coordenadas: {

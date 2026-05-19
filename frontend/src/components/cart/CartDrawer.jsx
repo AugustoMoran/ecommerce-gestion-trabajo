@@ -11,7 +11,15 @@ import { detectProductCurrency, getProductPrice, validateCartCurrencies } from '
 const CartDrawer = () => {
   const dispatch = useDispatch();
   const isOpen = useSelector(selectCartIsOpen);
-  const { items, total, removeFromCart, updateQuantity, clearCart } = useCart();
+  const { items, removeFromCart, updateQuantity, clearCart } = useCart();
+
+  const totalesPorMoneda = items.reduce((acc, item) => {
+    const currency = detectProductCurrency(item.producto) || 'ARS';
+    const price = getProductPrice(item.producto);
+    acc[currency] = (acc[currency] || 0) + price * item.cantidad;
+    return acc;
+  }, {});
+  const esMixto = Object.keys(totalesPorMoneda).length > 1;
 
   return (
     <>
@@ -124,10 +132,21 @@ const CartDrawer = () => {
 
         {/* Footer */}
         {items.length > 0 && (
-          <div className="px-5 py-4 border-t border-gray-100 space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="font-medium text-gray-600">Total</span>
-              <span className="font-bold text-xl">{formatCurrency(total)}</span>
+          <div className="px-5 py-4 border-t border-gray-800 space-y-3">
+            <div className="space-y-1">
+              {Object.entries(totalesPorMoneda).map(([currency, amount]) => (
+                <div key={currency} className="flex justify-between items-center">
+                  <span className="font-medium text-gray-400 text-sm">
+                    {esMixto ? `Subtotal ${currency}` : 'Total'}
+                  </span>
+                  <span className="font-bold text-xl">
+                    {currency === 'USD' ? `USD $${amount.toFixed(2)}` : formatCurrency(amount)}
+                  </span>
+                </div>
+              ))}
+              {esMixto && (
+                <p className="text-xs text-yellow-500 mt-1">⚠️ Mezclaste USD y ARS. Solo podés pagar por WhatsApp</p>
+              )}
             </div>
             <Link
               to="/checkout"

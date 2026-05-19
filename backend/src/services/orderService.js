@@ -9,10 +9,23 @@ const {
   sendShippingCodeEmail,
 } = require('../utils/sendNotifications');
 
+// ── Currency helpers ─────────────────────────────────────────────────────────
+const detectProductCurrency = (product) => {
+  if (product.priceUSD > 0 || product.priceOfferUSD > 0) return 'USD';
+  return 'ARS';
+};
+const getProductPrice = (product) => {
+  if (detectProductCurrency(product) === 'USD') {
+    return Number(product.priceOfferUSD || product.priceUSD || 0);
+  }
+  return Number(product.precioOferta || product.precio || product.priceOfferPesos || product.pricePesos || 0);
+};
+
 const createOrder = async ({ userId, guestData, items, cuponCodigo, metodoPago }) => {
   // Validate and build items
   let subtotal = 0;
   const orderItems = [];
+  const currencies = new Set();
 
   for (const item of items) {
     const product = await Product.findOne({ _id: item.producto, isActive: true });
@@ -40,16 +53,29 @@ const createOrder = async ({ userId, guestData, items, cuponCodigo, metodoPago }
       }
     }
 
+    const itemCurrency = detectProductCurrency(product);
+    const itemPrice = getProductPrice(product);
+    currencies.add(itemCurrency);
+
     orderItems.push({
       producto: product._id,
       nombre: product.nombre,
-      precio: product.precioOferta || product.precio,
+      precio: itemPrice,
       cantidad: item.cantidad,
       imagen: product.imagenes[0]?.url || '',
       talla: item.talla,
       color: item.color,
     });
-    subtotal += (product.precioOferta || product.precio) * item.cantidad;
+    subtotal += itemPrice * item.cantidad;
+  }
+
+  // Detect order currency
+  const orderMoneda = currencies.size > 1 ? 'mixto' : ([...currencies][0] || 'ARS');
+  if (orderMoneda === 'mixto' && metodoPago === 'mercadopago') {
+    throw Object.assign(
+      new Error('No se pueden mezclar productos en USD y ARS para pagar con Mercado Pago.'),
+      { statusCode: 400 }
+    );
   }
 
   // Handle coupon
@@ -121,6 +147,7 @@ const createOrder = async ({ userId, guestData, items, cuponCodigo, metodoPago }
     metodoPago: metodoPago || 'pendiente',
     estadoPago: 'pendiente',      // Always start as pending; webhook (MP) or admin (WhatsApp) approves
     estadoEnvio: 'pendiente',     // Always start as pending until admin dispatches
+    moneda: orderMoneda,
     stockDeducido: false,
     esEnAMBA: locationData.esEnAMBA,
     coordenadas: locationData.coordenadas,

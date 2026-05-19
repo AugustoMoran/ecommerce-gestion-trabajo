@@ -22,12 +22,13 @@ const createPreference = async (order) => {
     const client = getClient();
     const preference = new Preference(client);
 
+    const currency_id = order.moneda === 'USD' ? 'USD' : 'ARS';
     const items = order.items.map((item) => ({
       id: item.producto.toString(),
       title: item.nombre,
       quantity: item.cantidad,
       unit_price: Number(item.precio),
-      currency_id: 'ARS',
+      currency_id,
       picture_url: item.imagen || undefined,
     }));
 
