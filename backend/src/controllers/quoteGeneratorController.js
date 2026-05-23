@@ -261,10 +261,8 @@ const sendQuote = async (req, res, next) => {
 
 const downloadQuotePDF = async (req, res, next) => {
   try {
-    // Intentar con lean() primero, si falla, intentar sin lean()
     let quote = await Quote.findById(req.params.id).lean();
     
-    // Si no encontró con lean, intentar sin lean
     if (!quote) {
       quote = await Quote.findById(req.params.id);
     }
@@ -274,28 +272,55 @@ const downloadQuotePDF = async (req, res, next) => {
     }
 
     console.log('🔍 PDF Download - Quote found:', quote.numero);
-    console.log('🔍 PDF Download - Quote type:', quote.constructor?.name || 'Object');
-    console.log('🔍 PDF Download - Items:', JSON.stringify(quote.items, null, 2));
-    console.log('🔍 PDF Download - Totales:', JSON.stringify(quote.totales, null, 2));
-    console.log('🔍 PDF Download - Client:', JSON.stringify(quote.client, null, 2));
 
     if (req.user.role !== 'admin' && quote.client._id.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'No autorizado' });
     }
 
     try {
-      const pdfBuffer = await generateQuotePDF(quote);
-
+      // Set headers BEFORE writing
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="presupuesto-${quote.numero}.pdf"`);
+      
+      // Create PDF and write directly to response
+      const PDFDocument = require('pdfkit');
+      const doc = new PDFDocument();
+      
+      // Pipe directly to response
+      doc.pipe(res);
+      
+      // Add content
+      doc.fontSize(16).text('PRESUPUESTO', { align: 'center' });
+      doc.text('');
+      doc.fontSize(12).text(`Nº: ${quote.numero}`);
+      doc.text(`Cliente: ${quote.client?.nombre || 'N/A'}`);
+      doc.text('');
+      doc.fontSize(11).text('Productos:');
+      
+      if (quote.items && quote.items.length > 0) {
+        quote.items.forEach((item) => {
+          doc.text(`- ${item.nombre}: $${item.subtotal}`);
+        });
+      }
+      
+      doc.text('');
+      const total = quote.totales?.USD?.total || quote.totales?.ARS?.total || 0;
+      doc.fontSize(14).text(`TOTAL: $${total.toFixed(2)}`);
+      
+      // End document - this triggers the pipe to res
+      doc.end();
+      
+      console.log('✅ PDF piped to response');
+      
       if (quote.client._id.toString() === req.user._id.toString()) {
         await Quote.findByIdAndUpdate(req.params.id, { 'enviado.descargadoFecha': new Date() });
       }
-
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="presupuesto-${quote.numero}.pdf"`);
-      res.send(pdfBuffer);
+      
     } catch (pdfError) {
       console.error('❌ PDF Generation Error:', pdfError);
-      res.status(500).json({ message: 'Error al generar PDF', error: pdfError.message });
+      if (!res.headersSent) {
+        res.status(500).json({ message: 'Error al generar PDF', error: pdfError.message });
+      }
     }
   } catch (error) {
     console.error('❌ PDF Download Error:', error);
