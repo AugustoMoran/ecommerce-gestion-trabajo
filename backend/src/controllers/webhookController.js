@@ -3,6 +3,7 @@ const Order = require('../models/Order');
 const Product = require('../models/Product');
 const Cart = require('../models/Cart');
 const { sendOrderConfirmationToUser, sendOrderNotificationToAdmin } = require('../utils/sendNotifications');
+const logger = require('../utils/logger');
 
 const mercadopagoWebhook = async (req, res, next) => {
   try {
@@ -35,19 +36,39 @@ const mercadopagoWebhook = async (req, res, next) => {
       const MercadoPagoConfig = require('mercadopago').default;
       const { Payment } = require('mercadopago');
       
-      if (!process.env.MP_ACCESS_TOKEN) {
-        console.error('❌ MP_ACCESS_TOKEN no configurado');
+      const token = process.env.MP_ACCESS_TOKEN?.trim();
+      if (!token) {
+        logger.error('❌ MP_ACCESS_TOKEN no configurado en webhook', {
+          paymentId,
+          tokenExists: !!process.env.MP_ACCESS_TOKEN,
+        });
         return res.sendStatus(500);
       }
       
-      const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
+      logger.debug('Initializing MP client in webhook', {
+        tokenLength: token.length,
+        paymentId,
+      });
+
+      const client = new MercadoPagoConfig({ accessToken: token });
       const payment = new Payment(client);
       
       let paymentData;
       try {
+        logger.debug('Fetching payment data from Mercado Pago', { paymentId });
         paymentData = await payment.get({ id: paymentId });
+        logger.debug('✅ Payment data fetched successfully', {
+          paymentId,
+          status: paymentData.status,
+        });
       } catch (error) {
-        console.error('❌ Error obteniendo datos de pago desde MP:', error.message);
+        logger.error('❌ Error obteniendo datos de pago desde MP', {
+          message: error.message,
+          paymentId,
+          status: error.status,
+          code: error.code,
+          tokenConfigured: !!token,
+        });
         return res.sendStatus(500);
       }
 
