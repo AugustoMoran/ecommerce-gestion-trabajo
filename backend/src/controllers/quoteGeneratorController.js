@@ -261,14 +261,23 @@ const sendQuote = async (req, res, next) => {
 
 const downloadQuotePDF = async (req, res, next) => {
   try {
-    const quote = await Quote.findById(req.params.id).lean();
+    // Intentar con lean() primero, si falla, intentar sin lean()
+    let quote = await Quote.findById(req.params.id).lean();
+    
+    // Si no encontró con lean, intentar sin lean
+    if (!quote) {
+      quote = await Quote.findById(req.params.id);
+    }
+    
     if (!quote) {
       return res.status(404).json({ message: 'Presupuesto no encontrado' });
     }
 
     console.log('🔍 PDF Download - Quote found:', quote.numero);
+    console.log('🔍 PDF Download - Quote type:', quote.constructor?.name || 'Object');
     console.log('🔍 PDF Download - Items:', JSON.stringify(quote.items, null, 2));
     console.log('🔍 PDF Download - Totales:', JSON.stringify(quote.totales, null, 2));
+    console.log('🔍 PDF Download - Client:', JSON.stringify(quote.client, null, 2));
 
     if (req.user.role !== 'admin' && quote.client._id.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'No autorizado' });
@@ -278,7 +287,6 @@ const downloadQuotePDF = async (req, res, next) => {
       const pdfBuffer = await generateQuotePDF(quote);
 
       if (quote.client._id.toString() === req.user._id.toString()) {
-        quote.enviado.descargadoFecha = new Date();
         await Quote.findByIdAndUpdate(req.params.id, { 'enviado.descargadoFecha': new Date() });
       }
 
