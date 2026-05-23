@@ -272,7 +272,7 @@ const downloadQuotePDF = async (req, res, next) => {
       return res.status(404).json({ message: 'Presupuesto no encontrado' });
     }
 
-    console.log('🔍 PDF Download - Quote found:', quote.numero);
+    console.log('🔍 [PDF Download] Quote found:', quote.numero);
 
     if (req.user.role !== 'admin' && quote.client._id.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'No autorizado' });
