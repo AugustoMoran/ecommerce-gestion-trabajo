@@ -12,13 +12,21 @@
   </head>
   <body>
     <div id="root"></div>
-    <!-- Mercado Pago SDK - Loaded early to prevent race conditions -->
-    <script>
-      // Load MP SDK early with error handling
-      const script = document.createElement('script');
-      script.src = 'https://sdk.mercadopago.com/js/v2';
-      script.onerror = () => console.warn('⚠️ Failed to load Mercado Pago SDK from CDN');
-      document.head.appendChild(script);
+    <!-- Mercado Pago SDK - Must load before React app -->
+    <script type="text/javascript">
+      (function() {
+        const mpScript = document.createElement('script');
+        mpScript.src = 'https://sdk.mercadopago.com/js/v2';
+        mpScript.async = true;
+        mpScript.defer = true;
+        mpScript.onload = function() {
+          console.log('✅ Mercado Pago SDK loaded');
+        };
+        mpScript.onerror = function() {
+          console.warn('⚠️ Failed to load Mercado Pago SDK');
+        };
+        document.head.appendChild(mpScript);
+      })();
     </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
