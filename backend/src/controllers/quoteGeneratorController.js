@@ -467,6 +467,62 @@ const deleteQuote = async (req, res, next) => {
   }
 };
 
+// TEST ENDPOINT - Generate simple PDF to test PDFKit
+const testPDF = async (req, res, next) => {
+  try {
+    console.log('🧪 [TEST-PDF] Starting test PDF generation');
+    const chunks = [];
+    
+    const doc = new PDFDocument({
+      margin: 50,
+      size: 'A4'
+    });
+
+    console.log('🧪 [TEST-PDF] PDFDocument created');
+
+    doc.on('data', (chunk) => {
+      console.log('🧪 [TEST-PDF] Chunk received:', chunk.length, 'bytes');
+      chunks.push(chunk);
+    });
+
+    doc.on('error', (err) => {
+      console.error('🧪 [TEST-PDF] Error event:', err.message);
+    });
+
+    doc.on('finish', () => {
+      try {
+        console.log('🧪 [TEST-PDF] Finish event triggered');
+        const pdfBuffer = Buffer.concat(chunks);
+        console.log('🧪 [TEST-PDF] Buffer size:', pdfBuffer.length, 'bytes');
+        
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'attachment; filename="test.pdf"');
+        res.write(pdfBuffer);
+        res.end();
+        console.log('🧪 [TEST-PDF] Response sent');
+      } catch (err) {
+        console.error('🧪 [TEST-PDF] Finish error:', err.message);
+        if (!res.headersSent) {
+          res.status(500).json({ error: err.message });
+        }
+      }
+    });
+
+    // Add minimal content
+    console.log('🧪 [TEST-PDF] Adding content');
+    doc.fontSize(20).text('TEST PDF', { align: 'center' });
+    doc.text('This is a test PDF to verify PDFKit works in Render');
+    doc.text('If you see this, PDF generation is working!');
+    
+    console.log('🧪 [TEST-PDF] Calling doc.end()');
+    doc.end();
+    console.log('🧪 [TEST-PDF] doc.end() called');
+  } catch (error) {
+    console.error('🧪 [TEST-PDF] Outer error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   createQuote,
   getAllQuotes,
@@ -477,4 +533,5 @@ module.exports = {
   downloadQuotePDF,
   updateQuoteStatus,
   deleteQuote,
+  testPDF,
 };

@@ -11,7 +11,11 @@ const {
   downloadQuotePDF,
   updateQuoteStatus,
   deleteQuote,
+  testPDF,
 } = require('../controllers/quoteGeneratorController');
+
+// Test endpoint - no auth required
+router.get('/test/pdf', testPDF);
 
 // Admin: Crear presupuesto
 router.post('/', protect, createQuote);
