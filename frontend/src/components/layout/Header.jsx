@@ -296,6 +296,16 @@ const Header = () => {
             >
               Inicio
             </Link>
+
+            {/* Descargas Section */}
+            <Link
+              to="/downloads"
+              onClick={() => dispatch(closeMenu())}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 font-medium transition-colors text-gray-100"
+            >
+              Descargas
+            </Link>
+
             <Link
               to="/productos"
               onClick={() => dispatch(closeMenu())}
@@ -322,20 +332,6 @@ const Header = () => {
                 ))}
               </div>
             )}
-          </div>
-
-          {/* Descargas Section */}
-          <div className="px-5 py-3 border-t border-gray-700">
-            <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-              Descargas
-            </p>
-            <Link
-              to="/downloads"
-              onClick={() => dispatch(closeMenu())}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 font-medium transition-colors text-gray-100"
-            >
-              Centro de descargas
-            </Link>
           </div>
 
           {/* Footer */}
