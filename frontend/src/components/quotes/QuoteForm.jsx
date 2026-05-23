@@ -183,13 +183,15 @@ const QuoteForm = ({ quote, onClose, onSuccess }) => {
                 />
               </div>
               
-              {showClientDropdown && clientSearch && (
+              {showClientDropdown && (
                 <div className="absolute top-full left-0 right-0 bg-gray-800 border border-gray-600 rounded-lg mt-1 max-h-40 overflow-y-auto z-10">
                   {clients
                     .filter(c => 
+                      !clientSearch ||
                       c.nombre?.toLowerCase().includes(clientSearch.toLowerCase()) ||
                       c.email?.toLowerCase().includes(clientSearch.toLowerCase())
                     )
+                    .slice(0, clientSearch ? 100 : 12)
                     .map(c => (
                       <button
                         key={c._id}
@@ -265,10 +267,11 @@ const QuoteForm = ({ quote, onClose, onSuccess }) => {
                     />
                   </div>
                   
-                  {showProductDropdown && productSearch && (
+                  {showProductDropdown && (
                     <div className="absolute top-full left-0 right-0 bg-gray-800 border border-gray-600 rounded mt-1 max-h-40 overflow-y-auto z-10">
                       {products
-                        .filter(p => p.nombre?.toLowerCase().includes(productSearch.toLowerCase()))
+                        .filter(p => !productSearch || p.nombre?.toLowerCase().includes(productSearch.toLowerCase()))
+                        .slice(0, productSearch ? 100 : 12)
                         .map(p => (
                           <button
                             key={p._id}
