@@ -288,20 +288,19 @@ const downloadQuotePDF = async (req, res, next) => {
       return res.status(403).json({ message: 'No autorizado' });
     }
 
-    logPDFError(`📄 Creating PDF for ${quote.numero}`);
+    logPDFError(`📄 Creating professional PDF for ${quote.numero}`);
     
     // Generate PDF using Promise wrapper
-    const pdfPromise = new Promise((resolve, reject) => {
+    const pdfPromise = new Promise(async (resolve, reject) => {
       try {
         const chunks = [];
-        const doc = new PDFDocument({ margin: 40, size: 'A4', autoFirstPage: true });
+        const doc = new PDFDocument({ margin: 50, size: 'A4', autoFirstPage: true });
         
         doc.on('data', (chunk) => {
           chunks.push(chunk);
         });
         
         doc.on('end', () => {
-          // Use 'end' instead of 'finish' - more reliable
           try {
             const pdfBuffer = Buffer.concat(chunks);
             resolve(pdfBuffer);
@@ -313,45 +312,192 @@ const downloadQuotePDF = async (req, res, next) => {
         doc.on('error', (err) => {
           reject(err);
         });
+
+        // Try to download and add logo
+        try {
+          const http = require('http');
+          const https = require('https');
+          
+          await new Promise((logoResolve, logoReject) => {
+            const logoUrl = 'https://www.sausansystem.com.ar/logo-sausansystem.png';
+            const protocol = logoUrl.startsWith('https') ? https : http;
+            
+            const request = protocol.get(logoUrl, { timeout: 5000 }, (response) => {
+              if (response.statusCode !== 200) {
+                logoReject(new Error('Logo download failed'));
+                return;
+              }
+              
+              const chunks = [];
+              response.on('data', chunk => chunks.push(chunk));
+              response.on('end', () => {
+                try {
+                  const logoBuffer = Buffer.concat(chunks);
+                  // Add logo to PDF (60px wide, positioned at top)
+                  doc.image(logoBuffer, 50, 30, { width: 100 });
+                } catch (e) {
+                  console.warn('⚠️ Logo add warning:', e.message);
+                }
+                logoResolve();
+              });
+            });
+            
+            request.on('error', () => {
+              console.warn('⚠️ Logo download failed, continuing without logo');
+              logoResolve(); // Continue without logo
+            });
+            
+            request.on('timeout', () => {
+              request.destroy();
+              logoResolve(); // Continue without logo if timeout
+            });
+          });
+        } catch (logoError) {
+          console.warn('⚠️ Logo handling error:', logoError.message);
+          // Continue without logo
+        }
+
+        // Header with company name
+        doc.moveTo(170, 40).lineTo(550, 40).stroke('#0066cc');
+        doc.fontSize(24).font('Helvetica-Bold').fillColor('#0066cc').text('PRESUPUESTO', 170, 50);
+        doc.fontSize(10).fillColor('#666').text(`Nº ${quote.numero}`, 170, 80);
         
-        // Build content
-        doc.fontSize(20).font('Helvetica-Bold').text('PRESUPUESTO', { align: 'center' });
+        // Reset position after logo
+        doc.y = 160;
+        doc.fillColor('#000');
+
+        // Date and status
+        const createdDate = new Date(quote.createdAt).toLocaleDateString('es-AR', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        });
+        doc.fontSize(10).font('Helvetica')
+          .text(`Fecha: ${createdDate}`, { continued: true })
+          .text(`  |  Estado: ${quote.estado.toUpperCase()}`, { align: 'right' });
+        
+        doc.moveTo(50, doc.y + 5).lineTo(550, doc.y + 5).stroke('#ddd');
         doc.moveDown();
-        
-        doc.fontSize(12).font('Helvetica').text(`Número: ${quote.numero}`, { underline: true });
-        doc.text(`Fecha: ${new Date(quote.createdAt).toLocaleDateString('es-AR')}`);
-        doc.moveDown();
-        
-        // Client info
-        doc.fontSize(11).font('Helvetica-Bold').text('CLIENTE:');
-        doc.font('Helvetica')
+
+        // Client section
+        doc.fontSize(11).font('Helvetica-Bold').fillColor('#0066cc').text('DATOS DEL CLIENTE');
+        doc.fontSize(10).font('Helvetica').fillColor('#000')
           .text(`Nombre: ${quote.client?.nombre || 'N/A'}`)
           .text(`Email: ${quote.client?.email || 'N/A'}`)
           .text(`Teléfono: ${quote.client?.telefono || 'N/A'}`);
         doc.moveDown();
-        
-        // Items
-        doc.font('Helvetica-Bold').fontSize(11).text('PRODUCTOS:');
+
+        // Items table header
+        const tableTop = doc.y;
+        const col1 = 60;
+        const col2 = 280;
+        const col3 = 380;
+        const col4 = 480;
+        const rowHeight = 25;
+
+        doc.fontSize(10).font('Helvetica-Bold').fillColor('#fff').fillColor('#fff');
+        doc.rect(50, tableTop, 500, rowHeight).fill('#0066cc');
+        doc.fillColor('#fff').text('Descripción', col1, tableTop + 7);
+        doc.text('Cantidad', col2, tableTop + 7);
+        doc.text('Precio Unit.', col3, tableTop + 7);
+        doc.text('Subtotal', col4, tableTop + 7);
+
+        // Items rows
+        doc.fontSize(9).font('Helvetica').fillColor('#000');
+        let rowY = tableTop + rowHeight;
+        let itemCount = 0;
+
         if (quote.items && Array.isArray(quote.items) && quote.items.length > 0) {
-          doc.font('Helvetica').fontSize(10);
-          quote.items.forEach((item, idx) => {
+          quote.items.forEach((item) => {
             const qty = parseFloat(item.cantidad) || 0;
             const price = parseFloat(item.precioUnitario) || 0;
             const subtotal = qty * price;
-            doc.text(`${idx + 1}. ${item.nombre || 'Producto'}`);
-            doc.text(`   Cantidad: ${qty} x $${price.toFixed(2)} = $${subtotal.toFixed(2)}`);
+            
+            // Alternate row colors
+            if (itemCount % 2 === 0) {
+              doc.rect(50, rowY, 500, rowHeight).fill('#f5f5f5');
+              doc.fillColor('#000');
+            }
+            
+            doc.text(item.nombre || 'Producto', col1, rowY + 7);
+            doc.text(qty.toString(), col2, rowY + 7);
+            doc.text(`$${price.toFixed(2)}`, col3, rowY + 7);
+            doc.text(`$${subtotal.toFixed(2)}`, col4, rowY + 7);
+            
+            rowY += rowHeight;
+            itemCount++;
           });
         }
-        doc.moveDown();
+
+        // Installation line if included
+        const hasInstalacion = quote.instalacion?.incluye && quote.instalacion?.monto > 0;
+        if (hasInstalacion) {
+          if (itemCount % 2 === 0) {
+            doc.rect(50, rowY, 500, rowHeight).fill('#f5f5f5');
+            doc.fillColor('#000');
+          }
+          
+          const instMonto = parseFloat(quote.instalacion.monto) || 0;
+          const instCurrency = quote.instalacion.currency || 'USD';
+          const instDesc = quote.instalacion.descripcion || 'Instalación';
+          
+          doc.text(instDesc, col1, rowY + 7);
+          doc.text('1', col2, rowY + 7);
+          doc.text(`$${instMonto.toFixed(2)} ${instCurrency}`, col3, rowY + 7);
+          doc.text(`$${instMonto.toFixed(2)} ${instCurrency}`, col4, rowY + 7);
+          
+          rowY += rowHeight;
+          itemCount++;
+        }
+
+        // Totals section
+        doc.moveTo(50, rowY).lineTo(550, rowY).stroke('#ddd');
+        rowY += 15;
+
+        const totalUSD = parseFloat(quote.totales?.USD?.total || 0);
+        const totalARS = parseFloat(quote.totales?.ARS?.total || 0);
         
-        // Totals
-        const totalUSD = quote.totales?.USD?.total || 0;
-        const totalARS = quote.totales?.ARS?.total || 0;
-        doc.font('Helvetica-Bold').fontSize(14);
-        if (totalUSD > 0) doc.text(`TOTAL USD: $${parseFloat(totalUSD).toFixed(2)}`);
-        if (totalARS > 0) doc.text(`TOTAL ARS: $${parseFloat(totalARS).toFixed(2)}`);
-        if (totalUSD === 0 && totalARS === 0) doc.text('TOTAL: $0.00');
-        
+        // Show installation breakdown if exists
+        if (hasInstalacion) {
+          const instMonto = parseFloat(quote.instalacion.monto) || 0;
+          const instCurrency = quote.instalacion.currency || 'USD';
+          
+          doc.fontSize(9).font('Helvetica').fillColor('#666');
+          if (instCurrency === 'USD') {
+            doc.text(`(incluye instalación: $${instMonto.toFixed(2)} USD)`, 380, rowY);
+          } else {
+            doc.text(`(incluye instalación: $${instMonto.toFixed(2)} ARS)`, 380, rowY);
+          }
+          rowY += 15;
+        }
+
+        // Totals by currency
+        const totalGeneral = totalUSD + totalARS;
+
+        // Totals box
+        doc.fontSize(11).font('Helvetica-Bold').fillColor('#0066cc');
+        if (totalUSD > 0) {
+          doc.text(`TOTAL USD: $${totalUSD.toFixed(2)}`, 380, rowY);
+          rowY += 20;
+        }
+        if (totalARS > 0) {
+          doc.text(`TOTAL ARS: $${totalARS.toFixed(2)}`, 380, rowY);
+          rowY += 20;
+        }
+
+        // Grand total highlight
+        doc.rect(350, rowY - 5, 150, 35).fill('#0066cc');
+        doc.fontSize(14).font('Helvetica-Bold').fillColor('#fff')
+          .text(`TOTAL: $${totalGeneral.toFixed(2)}`, 360, rowY + 5);
+
+        // Footer
+        doc.moveDown(3);
+        doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke('#ddd');
+        doc.fontSize(8).font('Helvetica').fillColor('#999')
+          .text('SAUSAN SYSTEM - Gestión Integral de Trabajos', 50, doc.y + 10, { align: 'center' })
+          .text('www.sausansystem.com.ar', { align: 'center' })
+          .text('Presupuesto válido por 30 días desde su emisión', { align: 'center' });
+
         // End document
         doc.end();
       } catch (err) {

@@ -41,7 +41,7 @@ const QuoteForm = ({ quote, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     clientId: quote?.client._id || '',
     items: quote?.items || [],
-    instalacion: quote?.instalacion || { incluye: false, monto: 0, descripcion: '' },
+    instalacion: quote?.instalacion || { incluye: false, monto: 0, descripcion: '', currency: 'USD' },
     notas: quote?.notas || '',
   });
 
@@ -414,26 +414,44 @@ const QuoteForm = ({ quote, onClose, onSuccess }) => {
 
             {formData.instalacion.incluye && (
               <div className="space-y-2">
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={formData.instalacion.monto === 0 ? '' : formData.instalacion.monto}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    // Allow only numbers and single decimal point
-                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={formData.instalacion.monto === 0 ? '' : formData.instalacion.monto}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      // Allow only numbers and single decimal point
+                      if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                        setFormData({
+                          ...formData,
+                          instalacion: {
+                            ...formData.instalacion,
+                            monto: val === '' ? 0 : parseFloat(val) || 0,
+                          },
+                        })
+                      }
+                    }}
+                    placeholder="Monto de instalación"
+                    className="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <select
+                    value={formData.instalacion.currency || 'USD'}
+                    onChange={(e) =>
                       setFormData({
                         ...formData,
                         instalacion: {
                           ...formData.instalacion,
-                          monto: val === '' ? 0 : parseFloat(val) || 0,
+                          currency: e.target.value,
                         },
                       })
                     }
-                  }}
-                  placeholder="Monto de instalación"
-                  className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                    className="bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="USD">USD</option>
+                    <option value="ARS">ARS</option>
+                  </select>
+                </div>
 
                 <textarea
                   value={formData.instalacion.descripcion}
