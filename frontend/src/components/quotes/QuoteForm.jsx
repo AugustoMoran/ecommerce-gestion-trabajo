@@ -302,10 +302,16 @@ const QuoteForm = ({ quote, onClose, onSuccess }) => {
                     <div className="flex-1">
                       <label className="text-xs text-gray-300 mb-1 block">Cantidad</label>
                       <input
-                        type="number"
-                        min="1"
+                        type="text"
+                        inputMode="numeric"
                         value={tempQuantity}
-                        onChange={(e) => setTempQuantity(parseInt(e.target.value) || 1)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          // Allow only positive integers
+                          if (val === '' || /^\d+$/.test(val)) {
+                            setTempQuantity(val === '' ? 1 : parseInt(val));
+                          }
+                        }}
                         placeholder="1"
                         className="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm text-gray-100 focus:outline-none"
                       />
@@ -314,11 +320,16 @@ const QuoteForm = ({ quote, onClose, onSuccess }) => {
                     <div className="flex-1">
                       <label className="text-xs text-gray-300 mb-1 block">Precio ({selectedCurrency})</label>
                       <input
-                        type="number"
-                        step="0.01"
-                        min="0.01"
+                        type="text"
+                        inputMode="decimal"
                         value={tempPrice}
-                        onChange={(e) => setTempPrice(e.target.value === '' ? '' : parseFloat(e.target.value) || 0)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          // Allow only numbers and single decimal point
+                          if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                            setTempPrice(val);
+                          }
+                        }}
                         placeholder="0.00"
                         className="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm text-gray-100 focus:outline-none"
                         autoFocus
@@ -404,18 +415,22 @@ const QuoteForm = ({ quote, onClose, onSuccess }) => {
             {formData.instalacion.incluye && (
               <div className="space-y-2">
                 <input
-                  type="number"
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   value={formData.instalacion.monto === 0 ? '' : formData.instalacion.monto}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      instalacion: {
-                        ...formData.instalacion,
-                        monto: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0,
-                      },
-                    })
-                  }
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    // Allow only numbers and single decimal point
+                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                      setFormData({
+                        ...formData,
+                        instalacion: {
+                          ...formData.instalacion,
+                          monto: val === '' ? 0 : parseFloat(val) || 0,
+                        },
+                      })
+                    }
+                  }}
                   placeholder="Monto de instalación"
                   className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
