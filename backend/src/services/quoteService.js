@@ -18,8 +18,10 @@ const generateQuotePDF = (quote) => {
     try {
       console.log('📄 PDF Generation started for quote:', quote?.numero);
       
-      const pdfPath = path.join(__dirname, '../../', `.tmp_quote_${quote._id}.pdf`);
-      console.log('📄 Temporary PDF file:', pdfPath);
+      // Use /tmp for Render environment, or temp dir for local
+      const tmpDir = process.env.NODE_ENV === 'production' ? '/tmp' : path.join(__dirname, '../../');
+      const pdfPath = path.join(tmpDir, `pdf_${Date.now()}_${quote._id}.pdf`);
+      console.log('📄 Temporary PDF file path:', pdfPath);
       
       // Create write stream to file
       const writeStream = fs.createWriteStream(pdfPath);
