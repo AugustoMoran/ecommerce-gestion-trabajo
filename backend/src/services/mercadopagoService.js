@@ -21,7 +21,7 @@ const getClient = () => {
     throw new Error(errorMsg);
   }
   
-  if (!token.startsWith('APP_USR-')) {
+  if (!token.startsWith('APP_USR_') && !token.startsWith('APP_USR-')) {
     logger.warn('MP_ACCESS_TOKEN has unexpected format', {
       token: token.substring(0, 20) + '...',
     });
