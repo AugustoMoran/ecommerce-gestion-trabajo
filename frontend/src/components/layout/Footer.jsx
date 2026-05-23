@@ -12,18 +12,6 @@ const Footer = () => {
   const email = config.contactEmail;
   const phone = config.contactPhone;
 
-  const sucursal1 = {
-    nombre: config.sucursal1Nombre,
-    direccion: config.sucursal1Direccion,
-    detalles: config.sucursal1Detalles,
-  };
-
-  const sucursal2 = {
-    nombre: config.sucursal2Nombre,
-    direccion: config.sucursal2Direccion,
-    detalles: config.sucursal2Detalles,
-  };
-
   return (
     <footer className="bg-[#0D0D0D] text-gray-300 mt-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -68,23 +56,6 @@ const Footer = () => {
               <li><Link to="/productos?sort=popular" className="hover:text-white transition-colors">Más vendidos</Link></li>
               <li><Link to="/mis-ordenes" className="hover:text-white transition-colors">Mis pedidos</Link></li>
               <li><Link to="/favoritos" className="hover:text-white transition-colors">Favoritos</Link></li>
-            </ul>
-          </div>
-
-          {/* Sucursales */}
-          <div>
-            <h3 className="font-semibold text-white mb-4">📍 Sucursales</h3>
-            <ul className="space-y-3 text-sm">
-              <li className="hover:text-white transition-colors">
-                <p className="font-medium text-primary-400">{sucursal1.nombre}</p>
-                <p className="text-gray-400">{sucursal1.direccion}</p>
-                {sucursal1.detalles && <p className="text-gray-400">{sucursal1.detalles}</p>}
-              </li>
-              <li className="hover:text-white transition-colors">
-                <p className="font-medium text-primary-400">{sucursal2.nombre}</p>
-                <p className="text-gray-400">{sucursal2.direccion}</p>
-                {sucursal2.detalles && <p className="text-gray-400">{sucursal2.detalles}</p>}
-              </li>
             </ul>
           </div>
 
