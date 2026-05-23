@@ -61,8 +61,18 @@ export { baseQueryWithReauth };
 // Exportar función para actualizar token en memoria
 export const setMemoryToken = (token) => {
   accessToken = token;
+  // También guardar en sessionStorage para uso en descargas y otros contextos
+  if (token) {
+    sessionStorage.setItem('quoteToken', token);
+  }
+};
+
+export const getMemoryToken = () => {
+  // Intentar obtener del memory primero, luego del sessionStorage
+  return accessToken || sessionStorage.getItem('quoteToken');
 };
 
 export const clearMemoryToken = () => {
   accessToken = null;
+  sessionStorage.removeItem('quoteToken');
 };

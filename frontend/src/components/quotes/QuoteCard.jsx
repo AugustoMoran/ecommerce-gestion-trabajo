@@ -1,4 +1,5 @@
 import { useSendQuoteMutation, useUpdateQuoteStatusMutation, useDeleteQuoteMutation } from '../../services/quotesApi';
+import { getMemoryToken } from '../../services/baseApi';
 import toast from 'react-hot-toast';
 
 const QuoteCard = ({ quote, isAdmin = false, onDeleteSuccess }) => {
@@ -15,8 +16,41 @@ const QuoteCard = ({ quote, isAdmin = false, onDeleteSuccess }) => {
     }
   };
 
-  const handleDownloadPDF = () => {
-    window.open(`/api/quotes/${quote._id}/pdf`, '_blank');
+  const handleDownloadPDF = async () => {
+    try {
+      const token = getMemoryToken();
+      const headers = {
+        'Accept': 'application/pdf',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`/api/quotes/${quote._id}/pdf`, {
+        method: 'GET',
+        headers,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al descargar PDF');
+      }
+
+      const blob = await response.blob();
+      
+      // Create a temporary download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `presupuesto-${quote.numero}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      toast.error('Error al descargar PDF');
+      console.error('PDF download error:', error);
+    }
   };
 
   const handleAccept = async () => {
