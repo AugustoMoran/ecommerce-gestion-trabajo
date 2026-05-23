@@ -261,26 +261,36 @@ const sendQuote = async (req, res, next) => {
 
 const downloadQuotePDF = async (req, res, next) => {
   try {
-    const quote = await Quote.findById(req.params.id);
+    const quote = await Quote.findById(req.params.id).lean();
     if (!quote) {
       return res.status(404).json({ message: 'Presupuesto no encontrado' });
     }
+
+    console.log('🔍 PDF Download - Quote found:', quote.numero);
+    console.log('🔍 PDF Download - Items:', JSON.stringify(quote.items, null, 2));
+    console.log('🔍 PDF Download - Totales:', JSON.stringify(quote.totales, null, 2));
 
     if (req.user.role !== 'admin' && quote.client._id.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'No autorizado' });
     }
 
-    const pdfBuffer = await generateQuotePDF(quote);
+    try {
+      const pdfBuffer = await generateQuotePDF(quote);
 
-    if (quote.client._id.toString() === req.user._id.toString()) {
-      quote.enviado.descargadoFecha = new Date();
-      await quote.save();
+      if (quote.client._id.toString() === req.user._id.toString()) {
+        quote.enviado.descargadoFecha = new Date();
+        await Quote.findByIdAndUpdate(req.params.id, { 'enviado.descargadoFecha': new Date() });
+      }
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="presupuesto-${quote.numero}.pdf"`);
+      res.send(pdfBuffer);
+    } catch (pdfError) {
+      console.error('❌ PDF Generation Error:', pdfError);
+      res.status(500).json({ message: 'Error al generar PDF', error: pdfError.message });
     }
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="presupuesto-${quote.numero}.pdf"`);
-    res.send(pdfBuffer);
   } catch (error) {
+    console.error('❌ PDF Download Error:', error);
     next(error);
   }
 };

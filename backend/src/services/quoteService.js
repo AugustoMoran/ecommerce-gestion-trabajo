@@ -15,12 +15,22 @@ const transporter = nodemailer.createTransport({
 const generateQuotePDF = (quote) => {
   return new Promise((resolve, reject) => {
     try {
+      console.log('📄 PDF Generation started for quote:', quote?.numero);
+      console.log('📄 Items count:', quote?.items?.length);
+      
       const doc = new PDFDocument({ margin: 40, size: 'A4' });
       const buffers = [];
 
       doc.on('data', (data) => buffers.push(data));
-      doc.on('end', () => resolve(Buffer.concat(buffers)));
-      doc.on('error', reject);
+      doc.on('end', () => {
+        const finalBuffer = Buffer.concat(buffers);
+        console.log('✅ PDF Generated, size:', finalBuffer.length, 'bytes');
+        resolve(finalBuffer);
+      });
+      doc.on('error', (err) => {
+        console.error('❌ PDF Stream Error:', err);
+        reject(err);
+      });
 
       // Colores
       const primaryColor = '#2563EB'; // Azul
@@ -33,12 +43,16 @@ const generateQuotePDF = (quote) => {
       let yPosition = 30;
 
       if (fs.existsSync(logoPath)) {
-        doc.image(logoPath, 40, yPosition, { width: logoWidth });
+        try {
+          doc.image(logoPath, 40, yPosition, { width: logoWidth });
+        } catch (logoErr) {
+          console.log('⚠️  Logo not found:', logoPath);
+        }
       }
 
       // Título y número a la derecha
       doc.fontSize(28).fillColor(darkColor).font('Helvetica-Bold').text('PRESUPUESTO', 250, yPosition + 10);
-      doc.fontSize(11).fillColor(primaryColor).font('Helvetica-Bold').text(`Nº ${quote.numero}`, 250, yPosition + 40);
+      doc.fontSize(11).fillColor(primaryColor).font('Helvetica-Bold').text(`Nº ${quote.numero || 'SIN-NUMERO'}`, 250, yPosition + 40);
       doc.fontSize(9).fillColor('#666666').font('Helvetica').text(`Fecha: ${new Date(quote.createdAt).toLocaleDateString('es-AR')}`, 250, yPosition + 58);
 
       yPosition = yPosition + 100;
@@ -51,18 +65,20 @@ const generateQuotePDF = (quote) => {
       doc.fontSize(10).fillColor(darkColor).font('Helvetica-Bold').text('CLIENTE', 40, yPosition);
       yPosition += 18;
       doc.fontSize(9).fillColor('#374151').font('Helvetica');
-      doc.text(quote.client.nombre || '', 40, yPosition);
+      doc.text(quote.client?.nombre || 'SIN NOMBRE', 40, yPosition);
       yPosition += 12;
-      doc.text(quote.client.email || '', 40, yPosition);
+      doc.text(quote.client?.email || 'SIN EMAIL', 40, yPosition);
       yPosition += 12;
-      doc.text(quote.client.telefono || '', 40, yPosition);
+      doc.text(quote.client?.telefono || 'SIN TELÉFONO', 40, yPosition);
       yPosition += 12;
 
-      if (quote.client.direccion) {
+      if (quote.client?.direccion) {
         const { calle, ciudad, provincia } = quote.client.direccion;
         const direccion = [calle, ciudad, provincia].filter(Boolean).join(', ');
-        doc.text(direccion, 40, yPosition);
-        yPosition += 12;
+        if (direccion) {
+          doc.text(direccion, 40, yPosition);
+          yPosition += 12;
+        }
       }
 
       yPosition += 10;
@@ -82,21 +98,27 @@ const generateQuotePDF = (quote) => {
       yPosition = tableTop + 30;
       doc.fontSize(9).fillColor('#374151').font('Helvetica');
 
-      let rowBg = false;
-      quote.items.forEach((item) => {
-        // Fondo alterno
-        if (rowBg) {
-          doc.fillColor(lightColor).rect(40, yPosition - 3, 515, 20).fill();
-        }
-        rowBg = !rowBg;
+      // Items de productos
+      if (quote.items && Array.isArray(quote.items) && quote.items.length > 0) {
+        let rowBg = false;
+        quote.items.forEach((item) => {
+          // Fondo alterno
+          if (rowBg) {
+            doc.fillColor(lightColor).rect(40, yPosition - 3, 515, 20).fill();
+          }
+          rowBg = !rowBg;
 
-        doc.fillColor('#374151').font('Helvetica');
-        doc.text(item.nombre || '', 50, yPosition);
-        doc.text(item.cantidad.toString(), 265, yPosition);
-        doc.text(`$${item.precioUnitario.toFixed(2)} ${item.currency || 'USD'}`, 335, yPosition);
-        doc.text(`$${item.subtotal.toFixed(2)} ${item.currency || 'USD'}`, 455, yPosition);
+          doc.fillColor('#374151').font('Helvetica');
+          doc.text(item.nombre || 'SIN NOMBRE', 50, yPosition);
+          doc.text((item.cantidad || 0).toString(), 265, yPosition);
+          doc.text(`$${(item.precioUnitario || 0).toFixed(2)} ${item.currency || 'USD'}`, 335, yPosition);
+          doc.text(`$${(item.subtotal || 0).toFixed(2)} ${item.currency || 'USD'}`, 455, yPosition);
+          yPosition += 20;
+        });
+      } else {
+        doc.fillColor('#999999').text('SIN PRODUCTOS', 50, yPosition);
         yPosition += 20;
-      });
+      }
 
       // Instalación
       if (quote.instalacion.incluye) {
