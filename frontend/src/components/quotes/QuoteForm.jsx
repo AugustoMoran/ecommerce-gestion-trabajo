@@ -23,7 +23,7 @@ const QuoteForm = ({ quote, onClose, onSuccess }) => {
 
   const [createQuote] = useCreateQuoteMutation();
   const [updateQuote] = useUpdateQuoteMutation();
-  const { data: productsData = {} } = useGetProductsQuery(undefined, {
+  const { data: productsData = {} } = useGetProductsQuery({ limit: 10000, page: 1 }, {
     refetchOnMountOrArgChange: false,
     refetchOnFocus: false,
     refetchOnReconnect: false,

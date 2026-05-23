@@ -6,7 +6,8 @@ const getProducts = async ({ page = 1, limit = 12, categoria, search, sort, sinS
 
   // --- Validación y limpieza de parámetros ---
   let cleanPage = parseInt(page) || 1;
-  let cleanLimit = Math.max(1, Math.min(parseInt(limit) || 12, 100));
+  // Aumentar límite máximo a 10000 para admin/presupuestos (de 100 a 10000)
+  let cleanLimit = Math.max(1, Math.min(parseInt(limit) || 12, 10000));
   let cleanCategoria = (typeof categoria === 'string') ? categoria.trim() : '';
   let cleanSearch = (typeof search === 'string') ? search.trim() : '';
   let cleanSort = (typeof sort === 'string') ? sort.trim() : 'newest';
