@@ -41,7 +41,7 @@ export const adminUsersApi = baseApi.injectEndpoints({
     }),
 
     // GET /api/admin/users/roles/stats - estadísticas por rol
-    getUsersStatsQuery: builder.query({
+    getUsersStats: builder.query({
       query: () => '/admin/users/roles/stats',
       providesTags: ['UserStats'],
     }),
