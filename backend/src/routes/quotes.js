@@ -13,6 +13,11 @@ const {
   deleteQuote,
 } = require('../controllers/quoteGeneratorController');
 
+// TEST: Simple POST test
+router.post('/test/ping', protect, (req, res) => {
+  res.json({ message: 'POST works', timestamp: new Date() });
+});
+
 // Admin: Crear presupuesto
 router.post('/', protect, createQuote);
 
