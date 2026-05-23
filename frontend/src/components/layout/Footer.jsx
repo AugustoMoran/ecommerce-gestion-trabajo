@@ -1,12 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FaInstagram, FaWhatsapp } from 'react-icons/fa';
+import { FaWhatsapp } from 'react-icons/fa';
 import { HiMail, HiPhone } from 'react-icons/hi';
 import config from '../../config/app';
 
 const Footer = () => {
   const waNumber = config.whatsappNumber;
-  const instagramUrl = config.instagramUrl;
   const storeName = config.storeName;
   const logoUrl = config.logoUrl;
   const email = config.contactEmail;
@@ -36,15 +35,6 @@ const Footer = () => {
               >
                 <FaWhatsapp size={40} className="text-white" />
               </a>
-              <a
-                href={instagramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-20 h-20 bg-gradient-to-br from-purple-600 to-pink-500 rounded-full flex items-center justify-center hover:opacity-90 transition-all transform hover:scale-110 shadow-lg"
-                aria-label="Instagram"
-              >
-                <FaInstagram size={40} className="text-white" />
-              </a>
             </div>
           </div>
 
@@ -67,12 +57,6 @@ const Footer = () => {
                 <FaWhatsapp size={14} className="text-green-400" />
                 <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
                   WhatsApp
-                </a>
-              </li>
-              <li className="flex items-center gap-2">
-                <FaInstagram size={14} className="text-pink-400" />
-                <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
-                  Instagram
                 </a>
               </li>
               {email && (
