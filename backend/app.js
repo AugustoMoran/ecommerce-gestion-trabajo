@@ -49,18 +49,28 @@ app.set('trust proxy', 1);
 app.use(helmet());
 
 // CORS
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:5000',
+  'https://www.sausansystem.com.ar',
+  'https://sausansystem.com.ar',
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
 app.use(
   cors({
     origin: (origin, callback) => {
       // En desarrollo, acepta localhost en cualquier puerto
       if (process.env.NODE_ENV === 'development' && origin?.includes('localhost')) {
         callback(null, true);
-      } else if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) {
+      } else if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else if (!origin) {
         // Requests sin origin (como mobile apps, Postman, etc)
         callback(null, true);
       } else {
+        console.warn(`CORS bloqueado para origin: ${origin}`);
         callback(new Error('CORS no permitido'));
       }
     },
