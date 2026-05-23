@@ -1,4 +1,4 @@
-import { baseApi } from './baseApi';
+import { baseApi, setMemoryToken, clearMemoryToken } from './baseApi';
 import { setCredentials, logout } from '../features/auth/authSlice';
 
 export const authApi = baseApi.injectEndpoints({
@@ -8,6 +8,10 @@ export const authApi = baseApi.injectEndpoints({
       async onQueryStarted(_, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
+          // Guardar token en memoria para cross-domain
+          if (data.accessToken) {
+            setMemoryToken(data.accessToken);
+          }
           dispatch(setCredentials({ user: data.user }));
         } catch {
           // Component handles error display
@@ -19,6 +23,10 @@ export const authApi = baseApi.injectEndpoints({
       async onQueryStarted(_, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
+          // Guardar token en memoria para cross-domain (fallback si cookies no funciona)
+          if (data.accessToken) {
+            setMemoryToken(data.accessToken);
+          }
           dispatch(setCredentials({ user: data.user }));
         } catch {
           // Component handles error display
@@ -30,8 +38,10 @@ export const authApi = baseApi.injectEndpoints({
       async onQueryStarted(_, { dispatch, queryFulfilled }) {
         try {
           await queryFulfilled;
+          clearMemoryToken();
           dispatch(logout());
         } catch {
+          clearMemoryToken();
           dispatch(logout());
         }
       },

@@ -16,8 +16,10 @@ const register = async (req, res, next) => {
       await authService.mergeGuestCart(user._id, req.body.guestCart);
     }
 
-    // Response does NOT include accessToken - it's in HttpOnly cookie only
+    // Response incluye accessToken también (para fallback en cross-domain)
+    // El token primario sigue siendo HTTP-only cookie, esto es backup
     res.status(201).json({
+      accessToken, // Incluir token para enviar por Authorization header como fallback
       user: {
         _id: user._id,
         nombre: user.nombre,
@@ -46,8 +48,10 @@ const login = async (req, res, next) => {
       await authService.mergeGuestCart(user._id, req.body.guestCart);
     }
 
-    // Response does NOT include accessToken - it's in HttpOnly cookie only
+    // Response incluye accessToken también (para fallback en cross-domain)
+    // El token primario sigue siendo HTTP-only cookie, esto es backup
     res.json({
+      accessToken, // Incluir token para enviar por Authorization header como fallback
       user: {
         _id: user._id,
         nombre: user.nombre,
@@ -74,8 +78,11 @@ const refresh = async (req, res, next) => {
     setAccessTokenCookie(res, accessToken);
     setRefreshTokenCookie(res, refreshToken);
 
-    // Response does NOT include accessToken - it's in HttpOnly cookie only
-    res.json({ message: 'Token refreshed' });
+    // Incluir token en response para fallback cross-domain
+    res.json({ 
+      accessToken, // Para enviar por Authorization header si cookies no funciona
+      message: 'Token refreshed' 
+    });
   } catch (error) {
     next(error);
   }
