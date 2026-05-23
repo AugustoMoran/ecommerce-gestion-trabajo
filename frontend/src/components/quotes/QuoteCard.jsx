@@ -106,23 +106,21 @@ const QuoteCard = ({ quote, isAdmin = false, onDeleteSuccess }) => {
               {isSending ? 'Enviando...' : '📧 Enviar'}
             </button>
           )}
-          <a
-            href={`/api/quotes/${quote._id}/pdf`}
-            download={`presupuesto-${quote.numero}.pdf`}
+          <button
+            onClick={handleDownloadPDF}
             className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm inline-block transition"
           >
             📄 PDF
-          </a>
+          </button>
         </>
       ) : (
         <>
-          <a
-            href={`/api/quotes/${quote._id}/pdf`}
-            download={`presupuesto-${quote.numero}.pdf`}
+          <button
+            onClick={handleDownloadPDF}
             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm transition"
           >
             📄 Descargar PDF
-          </a>
+          </button>
 
           {quote.estado === 'enviado' && (
             <>
