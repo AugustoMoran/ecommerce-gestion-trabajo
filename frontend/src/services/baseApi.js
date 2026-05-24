@@ -22,11 +22,18 @@ let accessToken = null;
 const baseQuery = fetchBaseQuery({
   baseUrl: BASE_URL,
   credentials: 'include', // Intenta enviar cookies
-  prepareHeaders: (headers) => {
+  prepareHeaders: (headers, { getState }) => {
+    // Obtener token del Redux store primero (persiste entre reloads)
+    const state = getState();
+    const token = state?.auth?.accessToken || accessToken;
+    
     // FALLBACK: Si no hay cookie, usar token en memoria + Authorization header
-    // Esto es necesario para cross-domain (Hostinger → Render)
-    if (accessToken) {
-      headers.set('Authorization', `Bearer ${accessToken}`);
+    // Esto es necesario para cross-domain (www.sausansystem.com.ar → ecommerce-gestion-trabajo.onrender.com)
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+      console.log('✅ Sending Authorization header with token');
+    } else {
+      console.warn('⚠️ No token found in Redux or memory - request may fail with 401');
     }
     return headers;
   },
@@ -44,9 +51,23 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
     );
 
     if (refreshResult.data) {
-      // Guardar nuevo token en memoria
+      // Guardar nuevo token en memoria Y en Redux
       if (refreshResult.data.accessToken) {
         setMemoryToken(refreshResult.data.accessToken);
+        // También actualizar en Redux
+        const state = api.getState();
+        if (refreshResult.data.user) {
+          api.dispatch(setCredentials({ 
+            user: refreshResult.data.user,
+            accessToken: refreshResult.data.accessToken 
+          }));
+        } else {
+          // Si no viene usuario, al menos actualizar el token
+          api.dispatch(setCredentials({ 
+            user: state.auth.user,
+            accessToken: refreshResult.data.accessToken 
+          }));
+        }
       }
       // Backend automatically updated cookies
       // Just retry the original request

@@ -8,11 +8,14 @@ export const authApi = baseApi.injectEndpoints({
       async onQueryStarted(_, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          // Guardar token en memoria para cross-domain
+          // Guardar token en memoria Y en Redux (para cross-domain Vercel → Render)
           if (data.accessToken) {
             setMemoryToken(data.accessToken);
           }
-          dispatch(setCredentials({ user: data.user }));
+          dispatch(setCredentials({ 
+            user: data.user,
+            accessToken: data.accessToken 
+          }));
         } catch {
           // Component handles error display
         }
@@ -23,11 +26,14 @@ export const authApi = baseApi.injectEndpoints({
       async onQueryStarted(_, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          // Guardar token en memoria para cross-domain (fallback si cookies no funciona)
+          // Guardar token en memoria Y en Redux (para cross-domain Vercel → Render)
           if (data.accessToken) {
             setMemoryToken(data.accessToken);
           }
-          dispatch(setCredentials({ user: data.user }));
+          dispatch(setCredentials({ 
+            user: data.user,
+            accessToken: data.accessToken 
+          }));
         } catch {
           // Component handles error display
         }
