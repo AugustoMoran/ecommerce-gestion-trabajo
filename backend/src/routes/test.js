@@ -18,6 +18,8 @@ function addEmailLog(type, message, details = {}) {
   }
   console.log(`[${type.toUpperCase()}]`, message, details);
 }
+
+router.get('/debug', (req, res) => {
   res.json({ status: 'ok', message: 'Debug endpoint' });
 });
 
