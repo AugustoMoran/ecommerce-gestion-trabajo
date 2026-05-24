@@ -32,15 +32,20 @@ const Header = () => {
   const suggestionsRef = useRef(null);
   const debounceTimerRef = useRef(null);
   
-  // Debounce: esperar 300ms después de que el usuario deje de escribir
+  // Debounce: esperar 500ms después de que el usuario deje de escribir
   useEffect(() => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
     
-    debounceTimerRef.current = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
+    // Solo actualizar si hay contenido
+    if (search.trim().length > 0) {
+      debounceTimerRef.current = setTimeout(() => {
+        setDebouncedSearch(search.trim());
+      }, 500);
+    } else {
+      setDebouncedSearch('');
+    }
     
     return () => {
       if (debounceTimerRef.current) {
@@ -49,7 +54,10 @@ const Header = () => {
     };
   }, [search]);
   
-  const { data: suggestions = [] } = useGetProductSuggestionsQuery(debouncedSearch);
+  // Query solo con debouncedSearch, y con skip si está vacío
+  const { data: suggestions = [], isLoading: suggestionsLoading, error: suggestionsError } = useGetProductSuggestionsQuery(debouncedSearch, { 
+    skip: !debouncedSearch || debouncedSearch.trim().length === 0 
+  });
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
