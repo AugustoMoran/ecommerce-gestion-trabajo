@@ -5,10 +5,16 @@ const logger = require('../utils/logger');
 const smtpConfig = {
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: parseInt(process.env.SMTP_PORT || '587', 10),
-  secure: process.env.SMTP_SECURE === 'true' ? true : false, // true for 465, false for other ports
+  secure: process.env.SMTP_PORT === '465' ? true : false, // 465=TLS (secure:true), 587=STARTTLS (secure:false)
   auth: {
     user: process.env.SMTP_USER || process.env.EMAIL_FROM || 'sausansystem@gmail.com',
     pass: process.env.SMTP_PASS || 'eflo zqxv fyft yvct', // Gmail app password
+  },
+  connectionTimeout: 10000, // 10 seconds
+  socketTimeout: 10000, // 10 seconds
+  pool: {
+    maxConnections: 1,
+    maxMessages: 100,
   },
 };
 
