@@ -771,31 +771,30 @@ const testResendQuote = async (req, res, next) => {
       const pdfBuffer = await generateQuotePDF(quote);
       console.log(`✅ TEST: PDF generado (${pdfBuffer.length} bytes)`);
 
-      console.log(`📧 TEST: Enviando email...`);
-      await sendQuoteEmail(quote, pdfBuffer);
+      console.log(`📧 TEST: Enviando email con Resend...`);
+      const result = await sendQuoteEmail(quote, pdfBuffer);
       console.log(`✅ TEST: Email enviado a ${quote.client.email}`);
+      console.log(`  - Message ID: ${result.messageId}`);
 
       res.json({
         message: 'Presupuesto reenviado exitosamente',
         numero: quote.numero,
         email: quote.client.email,
+        messageId: result.messageId,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
       console.error(`❌ TEST ERROR:`, {
         message: error.message,
         code: error.code,
-        command: error.command,
         response: error.response,
       });
 
       res.status(500).json({
         message: 'Error al enviar presupuesto',
         error: error.message,
-        details: {
-          code: error.code,
-          command: error.command,
-        },
+        provider: 'resend',
+        timestamp: new Date().toISOString(),
       });
     }
   } catch (error) {
