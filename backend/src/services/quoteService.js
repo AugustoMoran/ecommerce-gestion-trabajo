@@ -1,17 +1,8 @@
 const PDFDocument = require('pdfkit');
-const nodemailer = require('nodemailer');
+const transporter = require('../config/mailer');
 const path = require('path');
 const fs = require('fs');
 const { PassThrough } = require('stream');
-
-// Configurar transporter de email
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER || 'tu-email@gmail.com',
-    pass: process.env.GMAIL_PASSWORD || 'tu-password',
-  },
-});
 
 const generateQuotePDF = (quote) => {
   return new Promise((resolve, reject) => {
@@ -159,7 +150,7 @@ const sendQuoteEmail = async (quote, pdfBuffer) => {
   `;
 
   const mailOptions = {
-    from: process.env.GMAIL_USER || 'noreply@sausansystem.com',
+    from: process.env.EMAIL_FROM || process.env.SMTP_USER || 'noreply@sausansystem.com',
     to: quote.client.email,
     subject: `Presupuesto #${quote.numero} - SAUSANSYSTEM`,
     html: emailTemplate,
@@ -172,7 +163,16 @@ const sendQuoteEmail = async (quote, pdfBuffer) => {
     ],
   };
 
-  return transporter.sendMail(mailOptions);
+  try {
+    console.log('📧 Email config:', { from: mailOptions.from, to: mailOptions.to, subject: mailOptions.subject });
+    const result = await transporter.sendMail(mailOptions);
+    console.log('✅ Email sent successfully:', result.messageId);
+    return result;
+  } catch (error) {
+    console.error('❌ Email send failed:', error.message);
+    console.error('Error details:', error);
+    throw error;
+  }
 };
 
 module.exports = {
