@@ -1,14 +1,6 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { baseApi } from './baseApi';
 
-export const recommendationApi = createApi({
-  reducerPath: 'recommendationApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl: '/api',
-    credentials: 'include',
-  }),
-
-  tagTypes: ['Recommendations', 'ClientRecommendations'],
-
+export const recommendationApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     // GET /api/admin/recommendations - listar recomendaciones (admin)
     getRecommendations: builder.query({
