@@ -26,11 +26,31 @@ const Header = () => {
   const menuOpen = useSelector((s) => s.ui.menuOpen);
   const { data: categories = [] } = useGetCategoriesQuery();
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [scrolled, setScrolled] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionsRef = useRef(null);
+  const debounceTimerRef = useRef(null);
   
-  const { data: suggestions = [] } = useGetProductSuggestionsQuery(search);
+  // Debounce search input
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [search]);
+  
+  const { data: suggestions = [] } = useGetProductSuggestionsQuery(debouncedSearch, { 
+    skip: !debouncedSearch || debouncedSearch.trim().length === 0 
+  });
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
