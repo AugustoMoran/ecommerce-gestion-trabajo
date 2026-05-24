@@ -1,46 +1,53 @@
-const sgMail = require('@sendgrid/mail');
+const nodemailer = require('nodemailer');
 const logger = require('../utils/logger');
 
-// Debug environment
-console.log('🔑 [Mailer Init] SENDGRID_API_KEY:', process.env.SENDGRID_API_KEY ? `✅ Present (${process.env.SENDGRID_API_KEY.substring(0, 10)}...)` : '❌ NOT FOUND');
-console.log('🔑 [Mailer Init] All env keys:', Object.keys(process.env).filter(k => k.includes('SEND') || k.includes('MAIL') || k.includes('EMAIL')));
+// Gmail configuration with app password
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false, // true for 465, false for other ports
+  auth: {
+    user: 'sausansystem@gmail.com',
+    pass: 'eflo zqxv fyft yvct', // Gmail app password
+  },
+});
 
-// Verify API key is set
-if (!process.env.SENDGRID_API_KEY) {
-  console.error('🚨 CRITICAL: SENDGRID_API_KEY is NOT configured in environment variables!');
-  console.error('   This will cause all email sends to fail with Forbidden error.');
-} else {
-  console.log('✅ Setting SendGrid API Key...');
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-  console.log('✅ SendGrid API Key successfully configured');
-}
+console.log('🔑 [Mailer Init] Gmail SMTP configured for sausansystem@gmail.com');
 
-// Create a compatible transporter interface for nodemailer compatibility
-const transporter = {
+// Verify transporter
+transporter.verify((error, success) => {
+  if (error) {
+    console.error('❌ [Gmail] Verification failed:', error);
+    logger.error('Gmail mailer verification failed', { message: error.message });
+  } else {
+    console.log('✅ [Gmail] Server is ready to send emails from sausansystem@gmail.com');
+    logger.info('Gmail mailer ready');
+  }
+});
+
+// Export transporter with enhanced methods
+const enhancedTransporter = {
   sendMail: async (options) => {
     try {
-      console.log('📧 [SendGrid] Preparing email to:', options.to);
+      console.log('📧 [Gmail] Preparing email to:', options.to);
       
-      if (!process.env.SENDGRID_API_KEY) {
-        throw new Error('SENDGRID_API_KEY environment variable is not set. Cannot send email.');
-      }
+      const fromEmail = options.from || 'sausansystem@gmail.com';
       
-      const fromEmail = options.from || process.env.SENDGRID_FROM_EMAIL || 'administracion@sausansystem.com.ar';
-      
-      const msg = {
+      const mailOptions = {
+        from: `Sausansystem <${fromEmail}>`,
         to: options.to,
-        from: fromEmail,
         subject: options.subject,
         html: options.html,
         replyTo: fromEmail,
       };
 
-      console.log('📧 [SendGrid] Message config:', { to: msg.to, from: msg.from, subject: msg.subject });
+      if (options.cc) mailOptions.cc = options.cc;
+      if (options.bcc) mailOptions.bcc = options.bcc;
 
       // Handle attachments if present
       if (options.attachments && options.attachments.length > 0) {
-        console.log(`📎 [SendGrid] Processing ${options.attachments.length} attachment(s)`);
-        msg.attachments = options.attachments.map((att) => {
+        console.log(`📎 [Gmail] Processing ${options.attachments.length} attachment(s)`);
+        mailOptions.attachments = options.attachments.map((att) => {
           const content = typeof att.content === 'string' 
             ? att.content 
             : att.content.toString('base64');
@@ -48,32 +55,26 @@ const transporter = {
           return {
             content: content,
             filename: att.filename,
-            type: att.contentType || 'application/octet-stream',
-            disposition: 'attachment',
+            contentType: att.contentType || 'application/octet-stream',
           };
         });
       }
 
-      console.log('📧 [SendGrid] Sending email...');
-      const result = await sgMail.send(msg);
-      console.log('✅ [SendGrid] Email sent successfully');
+      console.log('📧 [Gmail] Sending email...');
+      const info = await transporter.sendMail(mailOptions);
+      console.log('✅ [Gmail] Email sent:', info.messageId);
       
       return {
-        messageId: result[0]?.headers?.['x-message-id'] || 'sendgrid-sent',
-        response: result,
+        messageId: info.messageId,
+        response: info,
       };
     } catch (error) {
-      console.error('❌ [SendGrid] Send error:', error);
-      console.error('❌ [SendGrid] Error code:', error.code);
-      console.error('❌ [SendGrid] Error status:', error.status || error.statusCode);
-      console.error('❌ [SendGrid] Error response:', error.response?.body || error.response || 'No response');
-      console.error('❌ [SendGrid] Full error:', JSON.stringify(error, null, 2));
+      console.error('❌ [Gmail] Send error:', error.message);
+      console.error('❌ [Gmail] Full error:', JSON.stringify(error, null, 2));
       
-      logger.error('SendGrid error', { 
+      logger.error('Gmail send error', { 
         message: error.message,
         code: error.code,
-        status: error.status || error.statusCode,
-        response: error.response?.body || error.response,
         to: options.to,
       });
       throw error;
@@ -81,26 +82,28 @@ const transporter = {
   },
 
   verify: (callback) => {
-    if (process.env.SENDGRID_API_KEY) {
-      callback(null, true);
-      logger.info('SendGrid mailer ready');
-    } else {
-      const error = new Error('SENDGRID_API_KEY not configured');
-      callback(error);
-      logger.warn('SendGrid mailer config error', { message: error.message });
-    }
+    transporter.verify((error, success) => {
+      if (error) {
+        console.error('⚠️ Gmail verification failed:', error.message);
+        logger.warn('Gmail verification failed', { message: error.message });
+        callback(error);
+      } else {
+        console.log('✅ Gmail mailer is ready');
+        callback(null, true);
+      }
+    });
   },
 };
 
 // Run verification
-transporter.verify((error) => {
+enhancedTransporter.verify((error) => {
   if (error) {
     console.warn('⚠️ Mailer config error:', error.message);
     logger.warn('Mailer config error', { message: error.message });
   } else {
-    console.log('✅ Mailer ready - using SendGrid');
-    logger.info('Mailer ready - using SendGrid');
+    console.log('✅ Mailer ready - using Gmail SMTP');
+    logger.info('Mailer ready - using Gmail SMTP');
   }
 });
 
-module.exports = transporter;
+module.exports = enhancedTransporter;

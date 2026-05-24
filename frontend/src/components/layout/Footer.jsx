@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FaWhatsapp } from 'react-icons/fa';
+import { FaWhatsapp, FaInstagram } from 'react-icons/fa';
 import { HiMail, HiPhone } from 'react-icons/hi';
 import config from '../../config/app';
 
@@ -35,6 +35,15 @@ const Footer = () => {
               >
                 <FaWhatsapp size={40} className="text-white" />
               </a>
+              <a
+                href="https://www.instagram.com/sausansystem"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center hover:from-purple-600 hover:to-pink-600 transition-all transform hover:scale-110 shadow-lg"
+                aria-label="Instagram"
+              >
+                <FaInstagram size={40} className="text-white" />
+              </a>
             </div>
           </div>
 
@@ -59,14 +68,12 @@ const Footer = () => {
                   WhatsApp
                 </a>
               </li>
-              {email && (
-                <li className="flex items-center gap-2">
-                  <HiMail size={14} className="text-blue-400" />
-                  <a href={`mailto:${email}`} className="hover:text-white transition-colors">
-                    Email
-                  </a>
-                </li>
-              )}
+              <li className="flex items-center gap-2">
+                <HiMail size={14} className="text-blue-400" />
+                <a href="mailto:sausansystem@gmail.com" className="hover:text-white transition-colors">
+                  sausansystem@gmail.com
+                </a>
+              </li>
               {phone && (
                 <li className="flex items-center gap-2">
                   <HiPhone size={14} className="text-orange-400" />
@@ -75,6 +82,12 @@ const Footer = () => {
                   </a>
                 </li>
               )}
+              <li className="flex items-center gap-2">
+                <FaInstagram size={14} className="text-pink-500" />
+                <a href="https://www.instagram.com/sausansystem" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+                  @sausansystem
+                </a>
+              </li>
             </ul>
           </div>
         </div>

@@ -1,0 +1,20 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="95" fill="#2563eb" stroke="#1e40af" stroke-width="2"/>
+  
+  <!-- Inner circle -->
+  <circle cx="100" cy="100" r="85" fill="#3b82f6"/>
+  
+  <!-- Security shield symbol -->
+  <path d="M 100 40 L 140 55 L 140 90 C 140 120 100 145 100 145 C 100 145 60 120 60 90 L 60 55 Z" 
+        fill="#fbbf24" stroke="#f59e0b" stroke-width="2"/>
+  
+  <!-- Lock in center -->
+  <circle cx="100" cy="95" r="12" fill="none" stroke="#1e40af" stroke-width="2"/>
+  <rect x="94" y="88" width="12" height="18" fill="#1e40af" rx="2"/>
+  <circle cx="100" cy="97" r="2" fill="#1e40af"/>
+  
+  <!-- Text below -->
+  <text x="100" y="170" font-family="Arial, sans-serif" font-size="16" font-weight="bold" 
+        text-anchor="middle" fill="#2563eb">SAUSANSYSTEM</text>
+</svg>
