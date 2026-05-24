@@ -1,16 +1,24 @@
 const nodemailer = require('nodemailer');
 const logger = require('../utils/logger');
 
-// Gmail configuration with app password
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false, // true for 465, false for other ports
+// Gmail configuration with app password from environment variables
+const smtpConfig = {
+  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  port: parseInt(process.env.SMTP_PORT || '587', 10),
+  secure: process.env.SMTP_SECURE === 'true' ? true : false, // true for 465, false for other ports
   auth: {
-    user: 'sausansystem@gmail.com',
-    pass: 'eflo zqxv fyft yvct', // Gmail app password
+    user: process.env.SMTP_USER || process.env.EMAIL_FROM || 'sausansystem@gmail.com',
+    pass: process.env.SMTP_PASS || 'eflo zqxv fyft yvct', // Gmail app password
   },
+};
+
+console.log('🔑 [Mailer Init] SMTP config:', {
+  host: smtpConfig.host,
+  port: smtpConfig.port,
+  user: smtpConfig.auth.user,
 });
+
+const transporter = nodemailer.createTransport(smtpConfig);
 
 console.log('🔑 [Mailer Init] Gmail SMTP configured for sausansystem@gmail.com');
 
