@@ -30,7 +30,8 @@ const Header = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionsRef = useRef(null);
   
-  const { data: suggestions = [] } = useGetProductSuggestionsQuery(search);
+  // Solo hacer query si hay 2+ caracteres (evita búsquedas innecesarias)
+  const { data: suggestions = [] } = useGetProductSuggestionsQuery(search.length >= 2 ? search : '');
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
