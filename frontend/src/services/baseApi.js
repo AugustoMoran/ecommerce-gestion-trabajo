@@ -1,15 +1,22 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { logout, setCredentials } from '../features/auth/authSlice';
 
-// Determinar URL base en tiempo de EJECUCIÓN (no compilación)
+// Determinar URL base en tiempo de EJECUCIÓN verificando el hostname
+// No usar import.meta.env.DEV porque puede no compilarse correctamente en Vercel
 const getBaseUrl = () => {
-  // En desarrollo
-  if (import.meta.env.DEV) {
-    return '/api';
+  try {
+    // En desarrollo local
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      return '/api';
+    }
+    
+    // En producción (cualquier hostname que no sea localhost)
+    // Render backend está en https://ecommerce-gestion-trabajo.onrender.com
+    return 'https://ecommerce-gestion-trabajo.onrender.com/api';
+  } catch (e) {
+    // Fallback en SSR o si window no está disponible
+    return 'https://ecommerce-gestion-trabajo.onrender.com/api';
   }
-  
-  // En producción, siempre usar Render (www.sausansystem.com.ar apunta a Vercel, pero backend está en Render)
-  return 'https://ecommerce-gestion-trabajo.onrender.com/api';
 };
 
 const BASE_URL = getBaseUrl();
