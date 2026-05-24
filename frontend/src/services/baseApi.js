@@ -1,22 +1,15 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { logout, setCredentials } from '../features/auth/authSlice';
 
-// Determinar URL base
-// En desarrollo: http://localhost:5000/api
-// En producción (www.sausansystem.com.ar): https://ecommerce-gestion-trabajo.onrender.com/api
+// Determinar URL base en tiempo de EJECUCIÓN (no compilación)
 const getBaseUrl = () => {
-  const envUrl = import.meta.env.VITE_API_URL;
-  if (envUrl) return envUrl;
-  
-  // Si no hay env var, detectar basado en hostname
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    if (hostname.includes('sausansystem.com.ar') || hostname === 'www.sausansystem.com.ar') {
-      return 'https://ecommerce-gestion-trabajo.onrender.com/api';
-    }
+  // En desarrollo
+  if (import.meta.env.DEV) {
+    return '/api';
   }
   
-  return 'http://localhost:5000/api';
+  // En producción, siempre usar Render (www.sausansystem.com.ar apunta a Vercel, pero backend está en Render)
+  return 'https://ecommerce-gestion-trabajo.onrender.com/api';
 };
 
 const BASE_URL = getBaseUrl();
