@@ -54,10 +54,8 @@ const Header = () => {
     };
   }, [search]);
   
-  // Query solo con debouncedSearch, y con skip si está vacío
-  const { data: suggestions = [], isLoading: suggestionsLoading, error: suggestionsError } = useGetProductSuggestionsQuery(debouncedSearch, { 
-    skip: !debouncedSearch || debouncedSearch.trim().length === 0 
-  });
+  // Query solo con debouncedSearch, el skip ya está configurado en la definición
+  const { data: suggestions = [] } = useGetProductSuggestionsQuery(debouncedSearch);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
