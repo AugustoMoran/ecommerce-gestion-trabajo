@@ -1,7 +1,27 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { logout, setCredentials } from '../features/auth/authSlice';
 
-const BASE_URL = import.meta.env.VITE_API_URL || '/api';
+// Determinar URL base
+// En desarrollo: http://localhost:5000/api
+// En producción (www.sausansystem.com.ar): https://ecommerce-gestion-trabajo.onrender.com/api
+const getBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl) return envUrl;
+  
+  // Si no hay env var, detectar basado en hostname
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname.includes('sausansystem.com.ar') || hostname === 'www.sausansystem.com.ar') {
+      return 'https://ecommerce-gestion-trabajo.onrender.com/api';
+    }
+  }
+  
+  return 'http://localhost:5000/api';
+};
+
+const BASE_URL = getBaseUrl();
+
+console.log('🔧 BaseApi configured with URL:', BASE_URL);
 
 // Store token in memory (perdido al recargar, es seguro)
 let accessToken = null;
