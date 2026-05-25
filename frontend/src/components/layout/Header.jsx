@@ -26,10 +26,36 @@ const Header = () => {
   const menuOpen = useSelector((s) => s.ui.menuOpen);
   const { data: categories = [] } = useGetCategoriesQuery();
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [scrolled, setScrolled] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionsRef = useRef(null);
+  const debounceTimerRef = useRef(null);
   
-  // No hacer queries automáticas, solo cuando el usuario hace submit
+  // Debounce: esperar 400ms después de que el usuario deje de escribir
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    if (search.trim().length > 0) {
+      debounceTimerRef.current = setTimeout(() => {
+        setDebouncedSearch(search.trim());
+      }, 400);
+    } else {
+      setDebouncedSearch('');
+      setShowSuggestions(false);
+    }
+    
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [search]);
+  
+  // Query RTK - el skip está en la definición de la query
+  const { data: suggestions = [] } = useGetProductSuggestionsQuery(debouncedSearch);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -37,13 +63,31 @@ const Header = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(e.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleSearch = (e) => {
     e.preventDefault();
     if (search.trim()) {
       navigate(`/productos?search=${encodeURIComponent(search.trim())}`);
       setSearch('');
+      setShowSuggestions(false);
       dispatch(closeMenu());
     }
+  };
+
+  const handleSuggestionClick = (product) => {
+    navigate(`/productos/${product._id}`);
+    setSearch('');
+    setShowSuggestions(false);
+    dispatch(closeMenu());
   };
 
   return (
@@ -78,11 +122,48 @@ const Header = () => {
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
+                    onFocus={() => setShowSuggestions(true)}
                     placeholder="Buscar productos..."
                     className="input-field pl-10 pr-4 py-2 text-sm bg-gray-800 text-gray-100 border-gray-700 focus:ring-2 focus:ring-primary-400 w-full"
                   />
                 </div>
               </form>
+              
+              {/* Suggestions dropdown */}
+              {showSuggestions && debouncedSearch.length > 0 && suggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
+                  {suggestions.map((product) => (
+                    <button
+                      key={product._id}
+                      onClick={() => handleSuggestionClick(product)}
+                      className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-700 transition-colors border-b border-gray-700 last:border-b-0 text-left"
+                    >
+                      <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-800">
+                        {product.imagenes?.[0]?.url ? (
+                          <img src={product.imagenes[0].url} alt={product.nombre} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            <HiOutlineSearch size={16} />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-100 truncate">{product.nombre}</p>
+                        <p className="text-xs text-gray-400">
+                          ${product.precioOferta ? product.precioOferta.toLocaleString('es-AR') : product.precio.toLocaleString('es-AR')}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              
+              {/* No results message */}
+              {showSuggestions && debouncedSearch.length > 0 && suggestions.length === 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 p-4 text-center text-sm text-gray-400">
+                  No se encontraron productos
+                </div>
+              )}
             </div>
 
             {/* Actions */}
@@ -191,10 +272,40 @@ const Header = () => {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onFocus={() => setShowSuggestions(true)}
                 placeholder="Buscar..."
                 className="input-field pl-9 py-2 text-sm bg-gray-800 text-gray-100 border-gray-700 focus:ring-2 focus:ring-primary-400 w-full"
               />
             </div>
+            
+            {/* Suggestions dropdown mobile */}
+            {showSuggestions && debouncedSearch.length > 0 && suggestions.length > 0 && (
+              <div className="absolute top-full left-5 right-5 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto">
+                {suggestions.map((product) => (
+                  <button
+                    key={product._id}
+                    onClick={() => handleSuggestionClick(product)}
+                    className="w-full px-3 py-2 flex items-center gap-2 hover:bg-gray-700 transition-colors border-b border-gray-700 last:border-b-0 text-left text-sm"
+                  >
+                    <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-gray-800">
+                      {product.imagenes?.[0]?.url ? (
+                        <img src={product.imagenes[0].url} alt={product.nombre} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                          <HiOutlineSearch size={14} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-100 truncate text-xs">{product.nombre}</p>
+                      <p className="text-xs text-gray-400">
+                        ${product.precioOferta ? product.precioOferta.toLocaleString('es-AR') : product.precio.toLocaleString('es-AR')}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </form>
 
           {/* Nav Links */}
