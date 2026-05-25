@@ -61,13 +61,17 @@ const MyQuotes = () => {
                         <span>
                           {item.nombre} x{item.cantidad}
                         </span>
-                        <span>${(item.cantidad * item.precioUnitario).toFixed(2)}</span>
+                        <span>
+                          ${(item.cantidad * item.precioUnitario).toFixed(2)} {item.currency || 'USD'}
+                        </span>
                       </div>
                     ))}
                     {quote.instalacion.incluye && (
                       <div className="flex justify-between text-sm border-t pt-2">
                         <span>Instalación</span>
-                        <span>${quote.instalacion.monto.toFixed(2)}</span>
+                        <span>
+                          ${quote.instalacion.monto.toFixed(2)} {quote.instalacion.currency || 'USD'}
+                        </span>
                       </div>
                     )}
                   </div>

@@ -1,6 +1,10 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useGetProductsQuery, useGetCategoriesQuery } from '../services/productsApi';
+import { useGetExchangeRateQuery } from '../services/settingsApi';
+import { useSelector } from 'react-redux';
+import { selectCurrentUser } from '../features/auth/authSlice';
+import { getCurrencyByRole } from '../utils/getPriceByRole';
 import ProductCard from '../components/products/ProductCard';
 import useInfiniteScroll from '../hooks/useInfiniteScroll';
 import { HiAdjustments, HiX } from 'react-icons/hi';
@@ -13,6 +17,10 @@ const SORT_OPTIONS = [
 ];
 
 const Products = () => {
+  const user = useSelector(selectCurrentUser);
+  const { data: rateData } = useGetExchangeRateQuery();
+  const displayCurrency = getCurrencyByRole(user?.role);
+  const exchangeRate = rateData?.rate || 1000;
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -29,7 +37,7 @@ const Products = () => {
   const sort = ['newest','popular','price-asc','price-desc'].includes(searchParams.get('sort')) ? searchParams.get('sort') : 'newest';
 
   const { data, isFetching } = useGetProductsQuery(
-    { page, limit: 12, categoria, search, sort },
+    { page, limit: 12, categoria, search, sort, currency: displayCurrency, exchangeRate },
     {
       selectFromResult: ({ data, isFetching }) => ({ data, isFetching }),
     }

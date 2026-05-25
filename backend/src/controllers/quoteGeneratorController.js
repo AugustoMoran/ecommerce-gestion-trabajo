@@ -14,46 +14,39 @@ function logPDFError(msg) {
 }
 
 // Función helper para calcular totales por moneda
-const calculateTotalsByByCurrency = (items, instalacion) => {
-  const currencies = { USD: 0, ARS: 0 };
-  
-  // Sumar items por moneda
-  items.forEach(item => {
-    const currency = item.currency || 'USD';
-    currencies[currency] = (currencies[currency] || 0) + item.subtotal;
-  });
+const calculateTotalsByCurrency = (items, instalacion) => {
+  const normalizeCurrency = (value) => (value === 'ARS' ? 'ARS' : 'USD');
 
-  // Crear objeto de totales sin duplicar instalación
   const totales = {
-    USD: {
-      subtotal: currencies.USD || 0,
-      instalacion: 0,
-      total: currencies.USD || 0,
-    },
-    ARS: {
-      subtotal: currencies.ARS || 0,
-      instalacion: 0,
-      total: currencies.ARS || 0,
-    },
+    USD: { subtotal: 0, instalacion: 0, total: 0 },
+    ARS: { subtotal: 0, instalacion: 0, total: 0 },
   };
 
-  // Asignar instalación a la moneda seleccionada por el usuario
-  if (instalacion?.incluye && instalacion.monto > 0) {
-    const instCurrency = instalacion.currency || 'USD';
-    totales[instCurrency].instalacion = instalacion.monto;
-    totales[instCurrency].total = totales[instCurrency].subtotal + instalacion.monto;
+  // Sumar items por moneda
+  items.forEach((item) => {
+    const itemCurrency = normalizeCurrency(item.currency);
+    const itemSubtotal = Number(item.subtotal) || 0;
+    totales[itemCurrency].subtotal += itemSubtotal;
+  });
+
+  // Asignar instalación a la moneda seleccionada
+  const incluyeInstalacion = Boolean(instalacion?.incluye);
+  const installationAmount = Number(instalacion?.monto) || 0;
+  if (incluyeInstalacion && installationAmount > 0) {
+    const instCurrency = normalizeCurrency(instalacion?.currency);
+    totales[instCurrency].instalacion = installationAmount;
   }
 
-  // Total final es suma de ambas monedas
-  const total = totales.USD.total + totales.ARS.total;
+  totales.USD.total = totales.USD.subtotal + totales.USD.instalacion;
+  totales.ARS.total = totales.ARS.subtotal + totales.ARS.instalacion;
 
   return {
     USD: totales.USD,
     ARS: totales.ARS,
-    subtotal: currencies.USD + currencies.ARS,
-    instalacion: instalacion?.incluye ? instalacion.monto : 0,
+    subtotal: totales.USD.subtotal + totales.ARS.subtotal,
+    instalacion: totales.USD.instalacion + totales.ARS.instalacion,
     descuento: 0,
-    total,
+    total: totales.USD.total + totales.ARS.total,
   };
 };
 
@@ -87,16 +80,16 @@ const createQuote = async (req, res, next) => {
         return {
           producto: item.producto,
           nombre: item.nombre || product?.nombre,
-          cantidad: item.cantidad,
-          precioUnitario: item.precioUnitario,
-          subtotal: item.cantidad * item.precioUnitario,
-          currency: item.currency || 'USD',
+          cantidad: Number(item.cantidad) || 0,
+          precioUnitario: Number(item.precioUnitario) || 0,
+          subtotal: (Number(item.cantidad) || 0) * (Number(item.precioUnitario) || 0),
+          currency: item.currency === 'ARS' ? 'ARS' : 'USD',
         };
       })
     );
 
     // Calcular totales por moneda
-    const totales = calculateTotalsByByCurrency(processedItems, instalacion);
+    const totales = calculateTotalsByCurrency(processedItems, instalacion);
 
     const lastQuote = await Quote.findOne().sort({ createdAt: -1 });
     const nextNumber = lastQuote ? parseInt(lastQuote.numero.split('-')[1]) + 1 : 1;
@@ -114,9 +107,9 @@ const createQuote = async (req, res, next) => {
       items: processedItems,
       instalacion: {
         incluye: instalacion?.incluye || false,
-        monto: instalacion?.monto || 0,
+        monto: Number(instalacion?.monto) || 0,
         descripcion: instalacion?.descripcion,
-        currency: instalacion?.currency || 'USD',
+        currency: instalacion?.currency === 'ARS' ? 'ARS' : 'USD',
       },
       totales,
       notas,
@@ -192,10 +185,10 @@ const updateQuote = async (req, res, next) => {
           return {
             producto: item.producto,
             nombre: item.nombre || product?.nombre,
-            cantidad: item.cantidad,
-            precioUnitario: item.precioUnitario,
-            subtotal: item.cantidad * item.precioUnitario,
-            currency: item.currency || 'USD',
+            cantidad: Number(item.cantidad) || 0,
+            precioUnitario: Number(item.precioUnitario) || 0,
+            subtotal: (Number(item.cantidad) || 0) * (Number(item.precioUnitario) || 0),
+            currency: item.currency === 'ARS' ? 'ARS' : 'USD',
           };
         })
       );
@@ -205,9 +198,9 @@ const updateQuote = async (req, res, next) => {
     if (instalacion) {
       quote.instalacion = {
         incluye: instalacion.incluye || false,
-        monto: instalacion.monto || 0,
+        monto: Number(instalacion.monto) || 0,
         descripcion: instalacion.descripcion,
-        currency: instalacion.currency || 'USD',
+        currency: instalacion.currency === 'ARS' ? 'ARS' : 'USD',
       };
     }
 
@@ -216,7 +209,7 @@ const updateQuote = async (req, res, next) => {
     }
 
     // Calcular totales por moneda
-    quote.totales = calculateTotalsByByCurrency(quote.items, quote.instalacion);
+    quote.totales = calculateTotalsByCurrency(quote.items, quote.instalacion);
 
     await quote.save();
     res.json(quote);
@@ -414,6 +407,7 @@ const downloadQuotePDF = async (req, res, next) => {
             const qty = parseFloat(item.cantidad) || 0;
             const price = parseFloat(item.precioUnitario) || 0;
             const subtotal = qty * price;
+            const itemCurrency = item.currency === 'ARS' ? 'ARS' : 'USD';
             
             // Alternate row colors
             if (itemCount % 2 === 0) {
@@ -423,8 +417,8 @@ const downloadQuotePDF = async (req, res, next) => {
             
             doc.text(item.nombre || 'Producto', col1, rowY + 7);
             doc.text(qty.toString(), col2, rowY + 7);
-            doc.text(`$${price.toFixed(2)}`, col3, rowY + 7);
-            doc.text(`$${subtotal.toFixed(2)}`, col4, rowY + 7);
+            doc.text(`$${price.toFixed(2)} ${itemCurrency}`, col3, rowY + 7);
+            doc.text(`$${subtotal.toFixed(2)} ${itemCurrency}`, col4, rowY + 7);
             
             rowY += rowHeight;
             itemCount++;
@@ -473,9 +467,6 @@ const downloadQuotePDF = async (req, res, next) => {
           rowY += 15;
         }
 
-        // Totals by currency
-        const totalGeneral = totalUSD + totalARS;
-
         // Totals box
         doc.fontSize(11).font('Helvetica-Bold').fillColor('#0066cc');
         if (totalUSD > 0) {
@@ -487,10 +478,17 @@ const downloadQuotePDF = async (req, res, next) => {
           rowY += 20;
         }
 
-        // Grand total highlight
-        doc.rect(350, rowY - 5, 150, 35).fill('#0066cc');
-        doc.fontSize(14).font('Helvetica-Bold').fillColor('#fff')
-          .text(`TOTAL: $${totalGeneral.toFixed(2)}`, 360, rowY + 5);
+        // Mixed currency note / single-currency highlight
+        if (totalUSD > 0 && totalARS > 0) {
+          doc.fontSize(9).font('Helvetica').fillColor('#666')
+            .text('Total mixto: los importes se discriminan por moneda.', 300, rowY + 2, { width: 240, align: 'right' });
+        } else {
+          const totalSingleCurrency = totalUSD > 0 ? totalUSD : totalARS;
+          const totalSingleLabel = totalUSD > 0 ? 'USD' : 'ARS';
+          doc.rect(320, rowY - 5, 180, 35).fill('#0066cc');
+          doc.fontSize(13).font('Helvetica-Bold').fillColor('#fff')
+            .text(`TOTAL: $${totalSingleCurrency.toFixed(2)} ${totalSingleLabel}`, 328, rowY + 5);
+        }
 
         // Footer
         doc.moveDown(3);

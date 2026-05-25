@@ -2,7 +2,7 @@ const Product = require('../models/Product');
 const Category = require('../models/Category');
 const { cloudinary } = require('../config/cloudinary');
 
-const getProducts = async ({ page = 1, limit = 12, categoria, search, sort, sinStock }) => {
+const getProducts = async ({ page = 1, limit = 12, categoria, search, sort, sinStock, currency, exchangeRate }) => {
 
   // --- Validación y limpieza de parámetros ---
   let cleanPage = parseInt(page) || 1;
@@ -11,7 +11,11 @@ const getProducts = async ({ page = 1, limit = 12, categoria, search, sort, sinS
   let cleanCategoria = (typeof categoria === 'string') ? categoria.trim() : '';
   let cleanSearch = (typeof search === 'string') ? search.trim() : '';
   let cleanSort = (typeof sort === 'string') ? sort.trim() : 'newest';
+  let cleanCurrency = (typeof currency === 'string') ? currency.trim().toUpperCase() : 'ARS';
   let cleanSinStock = sinStock === 'true' || sinStock === true;
+  let cleanExchangeRate = Number(exchangeRate);
+  if (!Number.isFinite(cleanExchangeRate) || cleanExchangeRate <= 0) cleanExchangeRate = 1000;
+  if (!['USD', 'ARS'].includes(cleanCurrency)) cleanCurrency = 'ARS';
 
   // --- Construcción de query robusta ---
   const query = { isActive: true, deletedAt: null };
@@ -34,22 +38,109 @@ const getProducts = async ({ page = 1, limit = 12, categoria, search, sort, sinS
   const sortOptions = {
     newest: { createdAt: -1 },
     oldest: { createdAt: 1 },
-    'price-asc': { precio: 1 },
-    'price-desc': { precio: -1 },
     popular: { vendidos: -1 },
   };
   const sortBy = sortOptions[cleanSort] || sortOptions['newest'];
+
+  const buildSortPriceExpression = () => {
+    const rate = cleanExchangeRate;
+
+    const usdCandidates = [
+      '$priceOfferUSD',
+      '$priceUSD',
+      { $divide: [{ $ifNull: ['$precioOferta', 0] }, rate] },
+      { $divide: [{ $ifNull: ['$precio', 0] }, rate] },
+      { $divide: [{ $ifNull: ['$priceOfferPesos', 0] }, rate] },
+      { $divide: [{ $ifNull: ['$pricePesos', 0] }, rate] },
+    ];
+
+    const arsCandidates = [
+      '$priceOfferPesos',
+      '$pricePesos',
+      '$precioOferta',
+      '$precio',
+      { $multiply: [{ $ifNull: ['$priceOfferUSD', 0] }, rate] },
+      { $multiply: [{ $ifNull: ['$priceUSD', 0] }, rate] },
+    ];
+
+    const candidates = cleanCurrency === 'USD' ? usdCandidates : arsCandidates;
+
+    return {
+      $let: {
+        vars: {
+          candidates,
+        },
+        in: {
+          $ifNull: [
+            {
+              $arrayElemAt: [
+                {
+                  $filter: {
+                    input: '$$candidates',
+                    as: 'price',
+                    cond: { $gt: ['$$price', 0] },
+                  },
+                },
+                0,
+              ],
+            },
+            0,
+          ],
+        },
+      },
+    };
+  };
 
   // --- Logs para depuración ---
   // console.log('[getProducts] Query:', query, 'Sort:', sortBy, 'Page:', cleanPage, 'Limit:', cleanLimit);
 
   const total = await Product.countDocuments(query);
-  const products = await Product.find(query)
-    .populate('categoria', 'nombre')
-    .sort(sortBy)
-    .skip((cleanPage - 1) * cleanLimit)
-    .limit(cleanLimit)
-    .lean();
+  let products;
+
+  if (cleanSort === 'price-asc' || cleanSort === 'price-desc') {
+    const direction = cleanSort === 'price-asc' ? 1 : -1;
+
+    products = await Product.aggregate([
+      { $match: query },
+      {
+        $addFields: {
+          sortPrice: buildSortPriceExpression(),
+        },
+      },
+      { $sort: { sortPrice: direction, createdAt: -1 } },
+      { $skip: (cleanPage - 1) * cleanLimit },
+      { $limit: cleanLimit },
+      {
+        $lookup: {
+          from: 'categories',
+          localField: 'categoria',
+          foreignField: '_id',
+          as: 'categoria',
+        },
+      },
+      {
+        $unwind: {
+          path: '$categoria',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          sortPrice: 0,
+          'categoria.__v': 0,
+          'categoria.createdAt': 0,
+          'categoria.updatedAt': 0,
+        },
+      },
+    ]);
+  } else {
+    products = await Product.find(query)
+      .populate('categoria', 'nombre')
+      .sort(sortBy)
+      .skip((cleanPage - 1) * cleanLimit)
+      .limit(cleanLimit)
+      .lean();
+  }
 
   return {
     products,

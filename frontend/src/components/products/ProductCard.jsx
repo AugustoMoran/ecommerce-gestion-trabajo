@@ -39,9 +39,9 @@ const ProductCard = ({ product }) => {
   };
 
   return (
-    <Link to={`/productos/${product._id}`} className="card group cursor-pointer animate-fade-in">
+    <Link to={`/productos/${product._id}`} className="group cursor-pointer animate-fade-in bg-white rounded-2xl shadow-md overflow-hidden border border-gray-200">
       {/* Image */}
-      <div className="relative overflow-hidden aspect-square bg-gray-900">
+      <div className="relative overflow-hidden aspect-square bg-white">
         <img
           src={image}
           alt={product.nombre}
@@ -79,13 +79,13 @@ const ProductCard = ({ product }) => {
 
       {/* Info */}
       <div className="p-3">
-        <p className="text-xs text-gray-400 mb-1 truncate">{product.categoria?.nombre}</p>
-        <h3 className="font-semibold text-sm line-clamp-2 mb-2 text-gray-100 group-hover:text-primary-400 transition-colors">
+        <p className="text-xs text-gray-500 mb-1 truncate">{product.categoria?.nombre}</p>
+        <h3 className="font-semibold text-sm line-clamp-2 mb-2 text-gray-900 group-hover:text-primary-400 transition-colors">
           {product.nombre}
         </h3>
         <div className="flex items-baseline gap-1.5">
-          <span className="font-bold text-lg text-white">{formatCurrency(displayPrice, currency)}</span>
-          <span className="text-xs font-semibold text-white bg-gray-700 px-1.5 py-0.5 rounded">
+          <span className="font-bold text-lg text-gray-900">{formatCurrency(displayPrice, currency)}</span>
+          <span className="text-xs font-semibold text-white bg-gray-600 px-1.5 py-0.5 rounded">
             {currency}
           </span>
         </div>

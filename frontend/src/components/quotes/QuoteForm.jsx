@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useCreateQuoteMutation, useUpdateQuoteMutation } from '../../services/quotesApi';
 import { useGetProductsQuery } from '../../services/productsApi';
 import { useGetUsersListQuery } from '../../services/adminUsersApi';
+import { useGetExchangeRateQuery } from '../../services/settingsApi';
 import toast from 'react-hot-toast';
 import { HiOutlineSearch, HiX } from 'react-icons/hi';
 
@@ -19,7 +20,8 @@ const QuoteForm = ({ quote, onClose, onSuccess }) => {
   
   // Moneda y tasa de conversión
   const [selectedCurrency, setSelectedCurrency] = useState('USD');
-  const [exchangeRate, setExchangeRate] = useState(1000); // ARS por USD
+  const { data: rateData } = useGetExchangeRateQuery();
+  const exchangeRate = rateData?.rate || 1000; // ARS por USD
 
   const [createQuote] = useCreateQuoteMutation();
   const [updateQuote] = useUpdateQuoteMutation();
@@ -47,6 +49,34 @@ const QuoteForm = ({ quote, onClose, onSuccess }) => {
     notas: quote?.notas || '',
   });
 
+  useEffect(() => {
+    if (quote?.client?.nombre) {
+      setClientSearch(quote.client.nombre);
+    }
+  }, [quote]);
+
+  const getProductPriceByCurrency = (product, currency) => {
+    if (!product) return 0;
+
+    if (currency === 'USD') {
+      if (Number(product.priceOfferUSD) > 0) return Number(product.priceOfferUSD);
+      if (Number(product.priceUSD) > 0) return Number(product.priceUSD);
+      if (Number(product.precioOferta) > 0) return Number(product.precioOferta) / exchangeRate;
+      if (Number(product.precio) > 0) return Number(product.precio) / exchangeRate;
+      if (Number(product.priceOfferPesos) > 0) return Number(product.priceOfferPesos) / exchangeRate;
+      if (Number(product.pricePesos) > 0) return Number(product.pricePesos) / exchangeRate;
+      return 0;
+    }
+
+    if (Number(product.priceOfferPesos) > 0) return Number(product.priceOfferPesos);
+    if (Number(product.pricePesos) > 0) return Number(product.pricePesos);
+    if (Number(product.precioOferta) > 0) return Number(product.precioOferta);
+    if (Number(product.precio) > 0) return Number(product.precio);
+    if (Number(product.priceOfferUSD) > 0) return Number(product.priceOfferUSD) * exchangeRate;
+    if (Number(product.priceUSD) > 0) return Number(product.priceUSD) * exchangeRate;
+    return 0;
+  };
+
   const handleAddItem = () => {
     setFormData({
       ...formData,
@@ -62,10 +92,9 @@ const QuoteForm = ({ quote, onClose, onSuccess }) => {
   };
 
   const handleSelectProduct = (product) => {
-    // Buscar precio en cualquier campo disponible
-    const precioFinal = product.precioOferta ?? product.precio ?? product.priceOfferUSD ?? product.priceUSD ?? product.priceOfferPesos ?? product.pricePesos ?? 0;
+    const precioFinal = getProductPriceByCurrency(product, selectedCurrency);
     setSelectedProduct(product);
-    setTempPrice(precioFinal);
+    setTempPrice(Number(precioFinal.toFixed(2)));
     setProductSearch(product.nombre);
     setShowProductDropdown(false);
   };
@@ -105,21 +134,26 @@ const QuoteForm = ({ quote, onClose, onSuccess }) => {
 
   const calculateTotals = () => {
     // Agrupar por moneda
-    const byCurrency = { USD: 0, ARS: 0 };
+    const byCurrency = {
+      USD: { subtotal: 0, instalacion: 0, total: 0 },
+      ARS: { subtotal: 0, instalacion: 0, total: 0 },
+    };
     
     formData.items.forEach(item => {
-      const currency = item.currency || 'USD';
-      byCurrency[currency] = (byCurrency[currency] || 0) + item.cantidad * item.precioUnitario;
+      const currency = item.currency === 'ARS' ? 'ARS' : 'USD';
+      byCurrency[currency].subtotal += (Number(item.cantidad) || 0) * (Number(item.precioUnitario) || 0);
     });
 
-    const totalProducts = Object.values(byCurrency).reduce((a, b) => a + b, 0);
-    const instalacion = formData.instalacion.incluye ? formData.instalacion.monto : 0;
+    if (formData.instalacion.incluye && Number(formData.instalacion.monto) > 0) {
+      const instCurrency = formData.instalacion.currency === 'ARS' ? 'ARS' : 'USD';
+      byCurrency[instCurrency].instalacion = Number(formData.instalacion.monto);
+    }
+
+    byCurrency.USD.total = byCurrency.USD.subtotal + byCurrency.USD.instalacion;
+    byCurrency.ARS.total = byCurrency.ARS.subtotal + byCurrency.ARS.instalacion;
     
     return {
       byCurrency,
-      totalProducts,
-      instalacion,
-      total: totalProducts + instalacion,
     };
   };
 
@@ -284,7 +318,7 @@ const QuoteForm = ({ quote, onClose, onSuccess }) => {
                             <div className="flex justify-between items-center">
                               <span>{p.nombre}</span>
                               <span className="text-xs text-gray-400">
-                                ${(p.precioOferta ?? p.precio ?? p.priceOfferUSD ?? p.priceUSD ?? p.priceOfferPesos ?? p.pricePesos ?? 0).toFixed(2)}
+                                ${getProductPriceByCurrency(p, selectedCurrency).toFixed(2)} {selectedCurrency}
                               </span>
                             </div>
                           </button>
@@ -488,43 +522,43 @@ const QuoteForm = ({ quote, onClose, onSuccess }) => {
 
           {/* Totales Preview */}
           <div className="bg-gradient-to-r from-blue-900 to-blue-800 rounded-lg p-4 border border-blue-700">
-            {totals.byCurrency.USD > 0 && (
-              <div className={totals.byCurrency.ARS > 0 ? "mb-4 pb-4 border-b border-blue-600" : ""}>
+            {totals.byCurrency.USD.total > 0 && (
+              <div className={totals.byCurrency.ARS.total > 0 ? "mb-4 pb-4 border-b border-blue-600" : ""}>
                 <div className="flex justify-between mb-2">
                   <span className="text-gray-300">Subtotal USD:</span>
-                  <span className="font-medium text-gray-100">${totals.byCurrency.USD.toFixed(2)}</span>
+                  <span className="font-medium text-gray-100">${totals.byCurrency.USD.subtotal.toFixed(2)}</span>
                 </div>
-                {formData.instalacion.incluye && totals.byCurrency.ARS === 0 && (
+                {totals.byCurrency.USD.instalacion > 0 && (
                   <div className="flex justify-between mb-2">
-                    <span className="text-gray-300">Instalación:</span>
-                    <span className="font-medium text-gray-100">${totals.instalacion.toFixed(2)}</span>
+                    <span className="text-gray-300">Instalación USD:</span>
+                    <span className="font-medium text-gray-100">${totals.byCurrency.USD.instalacion.toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-lg font-bold pt-2">
-                  <span className="text-gray-200">{totals.byCurrency.ARS > 0 ? "Total USD:" : "Total Final:"}</span>
+                  <span className="text-gray-200">Total USD:</span>
                   <span className="text-green-400">
-                    ${(totals.byCurrency.USD + (formData.instalacion.incluye && totals.byCurrency.ARS === 0 ? totals.instalacion : 0)).toFixed(2)}
+                    ${totals.byCurrency.USD.total.toFixed(2)}
                   </span>
                 </div>
               </div>
             )}
             
-            {totals.byCurrency.ARS > 0 && (
+            {totals.byCurrency.ARS.total > 0 && (
               <div>
                 <div className="flex justify-between mb-2">
                   <span className="text-gray-300">Subtotal ARS:</span>
-                  <span className="font-medium text-gray-100">${totals.byCurrency.ARS.toFixed(2)}</span>
+                  <span className="font-medium text-gray-100">${totals.byCurrency.ARS.subtotal.toFixed(2)}</span>
                 </div>
-                {formData.instalacion.incluye && totals.byCurrency.USD === 0 && (
+                {totals.byCurrency.ARS.instalacion > 0 && (
                   <div className="flex justify-between mb-2">
-                    <span className="text-gray-300">Instalación:</span>
-                    <span className="font-medium text-gray-100">${totals.instalacion.toFixed(2)}</span>
+                    <span className="text-gray-300">Instalación ARS:</span>
+                    <span className="font-medium text-gray-100">${totals.byCurrency.ARS.instalacion.toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-lg font-bold pt-2">
-                  <span className="text-gray-200">{totals.byCurrency.USD > 0 ? "Total ARS:" : "Total Final:"}</span>
+                  <span className="text-gray-200">Total ARS:</span>
                   <span className="text-green-400">
-                    ${(totals.byCurrency.ARS + (formData.instalacion.incluye && totals.byCurrency.USD === 0 ? totals.instalacion : 0)).toFixed(2)}
+                    ${totals.byCurrency.ARS.total.toFixed(2)}
                   </span>
                 </div>
               </div>

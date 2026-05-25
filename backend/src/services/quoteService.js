@@ -38,13 +38,21 @@ const generateQuotePDF = (quote) => {
       
       if (quote.items && quote.items.length > 0) {
         quote.items.forEach((item) => {
-          doc.text(`- ${item.nombre}: $${item.subtotal}`);
+          doc.text(`- ${item.nombre}: $${(Number(item.subtotal) || 0).toFixed(2)} ${item.currency || 'USD'}`);
         });
       }
       
       doc.text('');
-      const total = quote.totales?.USD?.total || quote.totales?.ARS?.total || 0;
-      doc.fontSize(14).text(`TOTAL: $${total.toFixed(2)}`);
+      const totalUSD = Number(quote.totales?.USD?.total) || 0;
+      const totalARS = Number(quote.totales?.ARS?.total) || 0;
+
+      doc.fontSize(14);
+      if (totalUSD > 0) {
+        doc.text(`TOTAL USD: $${totalUSD.toFixed(2)}`);
+      }
+      if (totalARS > 0) {
+        doc.text(`TOTAL ARS: $${totalARS.toFixed(2)}`);
+      }
 
       // End document - THIS IS CRITICAL
       doc.end();
@@ -113,7 +121,7 @@ const sendQuoteEmail = async (quote, pdfBuffer) => {
                   <td>Instalación${quote.instalacion.descripcion ? ` - ${quote.instalacion.descripcion}` : ''}</td>
                   <td>-</td>
                   <td>-</td>
-                  <td>$${quote.instalacion.monto.toFixed(2)}</td>
+                  <td>$${quote.instalacion.monto.toFixed(2)} ${quote.instalacion.currency || 'USD'}</td>
                 </tr>
               ` : ''}
             </tbody>
@@ -121,8 +129,8 @@ const sendQuoteEmail = async (quote, pdfBuffer) => {
           
           <div class="total">
             ${(() => {
-              const hasUSD = quote.totales.USD && quote.totales.USD.subtotal > 0;
-              const hasARS = quote.totales.ARS && quote.totales.ARS.subtotal > 0;
+              const hasUSD = quote.totales?.USD && quote.totales.USD.total > 0;
+              const hasARS = quote.totales?.ARS && quote.totales.ARS.total > 0;
               const isMixed = hasUSD && hasARS;
               
               let html = '';
