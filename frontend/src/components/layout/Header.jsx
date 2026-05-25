@@ -56,6 +56,17 @@ const Header = () => {
     skip: !debouncedSearch || debouncedSearch.trim().length === 0,
   });
 
+  const safeSuggestions = Array.isArray(suggestions)
+    ? suggestions.filter((item) => item && typeof item === 'object')
+    : [];
+
+  const formatSuggestionPrice = (product) => {
+    const rawPrice = product?.precioOferta ?? product?.precio ?? 0;
+    const numericPrice = Number(rawPrice);
+    const safePrice = Number.isFinite(numericPrice) ? numericPrice : 0;
+    return `$${safePrice.toLocaleString('es-AR')}`;
+  };
+
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', onScroll);
@@ -85,6 +96,7 @@ const Header = () => {
   };
 
   const handleSuggestionClick = (product) => {
+    if (!product?._id) return;
     navigate(`/productos/${product._id}`);
     setSearch('');
     setDebouncedSearch('');
@@ -132,9 +144,9 @@ const Header = () => {
               </form>
               
               {/* Suggestions dropdown */}
-              {showSuggestions && debouncedSearch.length > 0 && suggestions.length > 0 && (
+              {showSuggestions && debouncedSearch.length > 0 && safeSuggestions.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
-                  {suggestions.map((product) => (
+                  {safeSuggestions.map((product) => (
                     <button
                       key={product._id}
                       onClick={() => handleSuggestionClick(product)}
@@ -151,9 +163,7 @@ const Header = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-100 truncate">{product.nombre}</p>
-                        <p className="text-xs text-gray-400">
-                          ${(product.precioOferta || product.precio || 0).toLocaleString('es-AR')}
-                        </p>
+                        <p className="text-xs text-gray-400">{formatSuggestionPrice(product)}</p>
                       </div>
                     </button>
                   ))}
@@ -161,7 +171,7 @@ const Header = () => {
               )}
               
               {/* No results message */}
-              {showSuggestions && debouncedSearch.length > 0 && suggestions.length === 0 && (
+              {showSuggestions && debouncedSearch.length > 0 && safeSuggestions.length === 0 && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 p-4 text-center text-sm text-gray-400">
                   No se encontraron productos
                 </div>
@@ -281,9 +291,9 @@ const Header = () => {
             </div>
             
             {/* Suggestions dropdown mobile */}
-            {showSuggestions && debouncedSearch.length > 0 && suggestions.length > 0 && (
+            {showSuggestions && debouncedSearch.length > 0 && safeSuggestions.length > 0 && (
               <div className="absolute top-full left-5 right-5 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto">
-                {suggestions.map((product) => (
+                {safeSuggestions.map((product) => (
                   <button
                     key={product._id}
                     onClick={() => handleSuggestionClick(product)}
@@ -300,9 +310,7 @@ const Header = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-100 truncate text-xs">{product.nombre}</p>
-                      <p className="text-xs text-gray-400">
-                        ${(product.precioOferta || product.precio || 0).toLocaleString('es-AR')}
-                      </p>
+                      <p className="text-xs text-gray-400">{formatSuggestionPrice(product)}</p>
                     </div>
                   </button>
                 ))}
