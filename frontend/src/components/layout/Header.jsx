@@ -73,7 +73,7 @@ const Header = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     if (search.trim()) {
-      navigate(`/productos?buscar=${encodeURIComponent(search.trim())}`);
+      navigate(`/productos?search=${encodeURIComponent(search.trim())}`);
       dispatch(closeMenu());
     }
   };
