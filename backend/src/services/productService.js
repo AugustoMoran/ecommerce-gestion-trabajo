@@ -1,6 +1,7 @@
 const Product = require('../models/Product');
 const Category = require('../models/Category');
 const { cloudinary } = require('../config/cloudinary');
+const mongoose = require('mongoose');
 
 const getProducts = async ({ page = 1, limit = 12, categoria, search, sort, sinStock, currency, exchangeRate }) => {
 
@@ -19,8 +20,17 @@ const getProducts = async ({ page = 1, limit = 12, categoria, search, sort, sinS
 
   // --- Construcción de query robusta ---
   const query = { isActive: true, deletedAt: null };
-  if (cleanCategoria && cleanCategoria !== '' && cleanCategoria !== 'todas' && cleanCategoria !== 'null' && cleanCategoria !== 'undefined') {
-    query.categoria = cleanCategoria;
+  const hasCategoryFilter =
+    cleanCategoria &&
+    cleanCategoria !== '' &&
+    cleanCategoria !== 'todas' &&
+    cleanCategoria !== 'null' &&
+    cleanCategoria !== 'undefined';
+
+  if (hasCategoryFilter) {
+    query.categoria = mongoose.Types.ObjectId.isValid(cleanCategoria)
+      ? new mongoose.Types.ObjectId(cleanCategoria)
+      : cleanCategoria;
   }
   // Solo usar $text si la búsqueda tiene al menos 2 caracteres
   if (cleanSearch.length >= 2) {
@@ -28,7 +38,7 @@ const getProducts = async ({ page = 1, limit = 12, categoria, search, sort, sinS
   }
   if (cleanSinStock) {
     query.stock = { $lte: 0 };
-  } else if (cleanCategoria && cleanCategoria !== '' && cleanCategoria !== 'todas' && cleanCategoria !== 'null' && cleanCategoria !== 'undefined') {
+  } else if (hasCategoryFilter) {
     // Si se filtra por categoría específica, mostrar solo productos con stock > 0
     query.stock = { $gt: 0 };
   }
